@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
 import CompetitionListPage from './pages/CompetitionListPage.tsx';
+import RegisterPage from './pages/RegisterPage.tsx';
 
 // Вспомогательный компонент для защищенных роутов
 interface ProtectedRouteProps {
@@ -60,6 +61,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             
             <Route 
               path="/profile" 
@@ -72,7 +74,6 @@ function App() {
             
             <Route path="/competitions" element={<CompetitionListPage />} />
             
-            {/* Редирект на домашнюю страницу для неизвестных маршрутов */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
