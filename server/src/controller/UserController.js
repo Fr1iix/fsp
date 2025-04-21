@@ -1,7 +1,7 @@
 const ApiError = require('../errorr/ApiError');
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
-const {User, UserInfo} = require('../models/models')
+const {User, UserInfo, Basket} = require('../models/models')
 
 const generateJwt = (id, email, role) => {
     return jwt.sign(
@@ -13,7 +13,7 @@ const generateJwt = (id, email, role) => {
 
 class UserController {
     async registration(req, res, next){
-        const {email, password, phone, role} = req.body
+        const {email, password, role} = req.body
         if (!email || !password) {
             return next(ApiError.badRequest('Некорректный email или password'))
         }
@@ -24,11 +24,18 @@ class UserController {
         }
 
         const hashPassword = await bcrypt.hash(password, 5)
-        const user = await User.create({email: email, password: hashPassword, phone: phone, role: role})
-        await UserInfo.create({userId: user.id})
-        const token = generateJwt(user.id, user.email, user.role)
 
+        try {
+            const user = await User.create({email: email, password: hashPassword, role})
+            const userInfo = await UserInfo.create({userId: user.id})
+            await Basket.create({userId: userInfo.userId})
 
+            const token = generateJwt(user.id, user.email, user.role)
+
+            return res.json({token})
+        } catch (error) {
+            return next(ApiError.badRequest('Ошибка при создании пользователя и связанных данных'))
+        }
     }
 
 
@@ -51,7 +58,6 @@ class UserController {
 
     async check(req, res){
         const token = generateJwt(req.user.id, req.user.email, req.user.role)
-
         return res.json({token})
     }
 }

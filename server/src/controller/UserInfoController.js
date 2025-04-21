@@ -5,19 +5,23 @@ const ApiError = require('../errorr/ApiError');
 class UserInfoController {
     async create(req, res, next) {
         try {
-            let {firstName,lastname,middleName,birthday,gender,address, age} = req.body
-            const userinfo = await UserInfo.create({firstName,lastname,middleName,birthday,gender,address,age});
+            let {firstName,lastname,middleName,birthday,gender,address,phone} = req.body
+            const userinfo = await UserInfo.create({firstName,lastname,middleName,birthday,gender,address,phone});
             return res.json(userinfo)
         } catch (e) {
             next(ApiError.badRequest(e.message))
         }
     }
 
+    async deleteUserInfo(req,res){
+        const id = req.params.id
+        await UserInfo.destroy({where: {id}})
+    }
 
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            firstName,lastname,middleName,birthday,gender,address,phone,balance
+            firstName,lastname,middleName,birthday,gender,address,phone
         } = req.body;
 
 
@@ -35,7 +39,6 @@ class UserInfoController {
             userinfo.gender = gender;
             userinfo.address = address;
             userinfo.phone = phone;
-            userinfo.balance = balance
 
 
             await userinfo.save();

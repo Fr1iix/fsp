@@ -2,9 +2,8 @@ const Router = require('express')
 const router = new Router()
 const UserInfoController = require('../controller/UserInfoController')
 
-
-router.post("/create", UserInfoController.create)
-router.put("/update/:id", UserInfoController.updateOne)
-router.get("/getOne/:id", UserInfoController.getOneUserInfo)
+router.delete('/deleteUserInfo/:id', UserInfoController.deleteUserInfo)
+router.put("/updateUserInfo/:id", UserInfoController.updateOne)
+router.get("/getoneUserInfo/:id", UserInfoController.getOneUserInfo)
 
 module.exports = router

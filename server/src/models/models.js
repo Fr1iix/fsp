@@ -26,6 +26,7 @@ User.hasOne(UserInfo, {
 UserInfo.belongsTo(User)
 
 module.exports = {
+    sequelize,
     User,
     UserInfo
 }
