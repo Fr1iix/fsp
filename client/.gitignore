@@ -7,7 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-../../../Downloads/AyuGram Desktop/project/node_modules
+node_modules
 dist
 dist-ssr
 *.local
