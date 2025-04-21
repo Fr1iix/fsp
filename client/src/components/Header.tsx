@@ -13,7 +13,7 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white z-50 border-b border-neutral-100">
+    <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-50 border-b border-neutral-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Логотип */}
@@ -93,7 +93,7 @@ const Header: React.FC = () => {
 
       {/* Мобильная навигация */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-neutral-100">
+        <div className="md:hidden bg-white/80 backdrop-blur-sm border-t border-neutral-100">
           <div className="px-4 py-2 space-y-1">
             <Link to="/" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               Главная

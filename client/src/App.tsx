@@ -8,6 +8,8 @@ import LoginPage from './pages/LoginPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
 import CompetitionListPage from './pages/CompetitionListPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
+import TeamsPage from './pages/TeamsPage.tsx';
+import AboutPage from './pages/AboutPage.tsx';
 
 // Вспомогательный компонент для защищенных роутов
 interface ProtectedRouteProps {
@@ -16,13 +18,13 @@ interface ProtectedRouteProps {
   allowedRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
   requireAuth = true,
   allowedRoles = []
 }) => {
   const { user, isLoading } = useAuthStore();
-  
+
   // Если идет загрузка, показываем спиннер
   if (isLoading) {
     return (
@@ -31,28 +33,28 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       </div>
     );
   }
-  
+
   // Если требуется авторизация, но пользователь не авторизован
   if (requireAuth && !user) {
     return <Navigate to="/login" replace />;
   }
-  
+
   // Если указаны разрешенные роли и пользователь не имеет нужной роли
   if (requireAuth && user && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 
 function App() {
   const { checkAuth } = useAuthStore();
-  
+
   // Проверяем аутентификацию при загрузке приложения
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
-  
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
@@ -62,18 +64,20 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            
-            <Route 
-              path="/profile" 
+            <Route path="/about" element={<AboutPage />} />
+
+            <Route
+              path="/profile"
               element={
                 <ProtectedRoute>
                   <ProfilePage />
                 </ProtectedRoute>
-              } 
+              }
             />
-            
+
             <Route path="/competitions" element={<CompetitionListPage />} />
-            
+            <Route path="/teams" element={<TeamsPage />} />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

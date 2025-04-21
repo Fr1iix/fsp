@@ -9,10 +9,10 @@ interface CardProps {
   onClick?: () => void;
 }
 
-const Card: React.FC<CardProps> = ({ 
-  children, 
-  className, 
-  padding = 'md', 
+const Card: React.FC<CardProps> = ({
+  children,
+  className,
+  padding = 'md',
   hoverable = false,
   onClick
 }) => {
@@ -24,13 +24,13 @@ const Card: React.FC<CardProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={clsx(
-        'card', 
-        paddingClasses[padding], 
+        'card',
+        paddingClasses[padding],
         hoverable && 'cursor-pointer transform transition-transform duration-200 hover:scale-[1.02]',
         'animate-fade-in',
-        className
+        className || 'bg-white/80 backdrop-blur-sm'
       )}
       onClick={onClick}
     >

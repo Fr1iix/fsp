@@ -15,21 +15,21 @@ interface LoginFormData {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
-  
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     defaultValues: {
       email: '',
       password: '',
     },
   });
-  
+
   const onSubmit = async (data: LoginFormData) => {
     await login(data.email, data.password);
     navigate('/');
   };
-  
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
@@ -38,15 +38,15 @@ const LoginPage: React.FC = () => {
             Войдите в свою учетную запись Федерации спортивного программирования
           </p>
         </div>
-        
-        <Card>
+
+        <Card className="!bg-white !bg-opacity-100 !backdrop-blur-none shadow-md">
           <CardContent className="pt-6">
             {error && (
               <div className="mb-6 p-3 bg-error-50 border border-error-200 text-error-700 rounded-md animate-fade-in">
                 {error}
               </div>
             )}
-            
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <Input
                 label="Email"
@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
                 leftIcon={<Mail className="h-4 w-4" />}
                 error={errors.email?.message}
                 fullWidth
-                {...register('email', { 
+                {...register('email', {
                   required: 'Email обязателен',
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -62,14 +62,14 @@ const LoginPage: React.FC = () => {
                   }
                 })}
               />
-              
+
               <Input
                 label="Пароль"
                 type="password"
                 leftIcon={<Lock className="h-4 w-4" />}
                 error={errors.password?.message}
                 fullWidth
-                {...register('password', { 
+                {...register('password', {
                   required: 'Пароль обязателен',
                   minLength: {
                     value: 6,
@@ -77,17 +77,17 @@ const LoginPage: React.FC = () => {
                   }
                 })}
               />
-              
-              <Button 
-                type="submit" 
-                fullWidth 
+
+              <Button
+                type="submit"
+                fullWidth
                 isLoading={isLoading}
               >
                 Войти
               </Button>
             </form>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col space-y-4 pt-4 border-t border-neutral-200">
             <p className="text-center text-sm text-neutral-600">
               Еще нет учетной записи?{' '}

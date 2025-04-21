@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Code, Award, Users, Layers } from 'lucide-react';
 import { useCompetitionStore } from '../store/competitionStore.ts';
+import { Competition } from '../types';
 import CompetitionCard from '../components/CompetitionCard.tsx';
 import Button from '../components/ui/Button.tsx';
 import Header from '../components/Header.tsx';
@@ -9,7 +10,7 @@ import Header from '../components/Header.tsx';
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const { competitions, fetchCompetitions, isLoading } = useCompetitionStore();
-  const [upcomingCompetitions, setUpcomingCompetitions] = useState([]);
+  const [upcomingCompetitions, setUpcomingCompetitions] = useState<Competition[]>([]);
 
   useEffect(() => {
     const loadCompetitions = async () => {
@@ -46,7 +47,7 @@ const HomePage: React.FC = () => {
               </p>
               <div className="flex flex-wrap gap-4 animate-fade-in">
                 <Button
-                  className="bg-white text-primary-700 hover:bg-primary-50"
+                  className="bg-white/100 backdrop-blur-sm text-primary-700 hover:bg-primary-50/80"
                   size="lg"
                   onClick={() => navigate('/competitions')}
                 >
@@ -73,7 +74,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Секция дисциплин */}
-      <section className="py-20 px-4 bg-gradient-to-b from-white to-neutral-50">
+      <section className="py-20 px-4 bg-transparent">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent animate-fade-in">
@@ -307,13 +308,13 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Предстоящие соревнования */}
-      <section className="py-16 px-4 bg-neutral-50">
+      <section className="py-16 px-4 bg-transparent">
         <div className="container mx-auto max-w-6xl">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-3xl font-bold">Предстоящие соревнования</h2>
             <Button
-              variant="outline"
-              rightIcon={<ArrowRight className="h-4 w-4" />}
+              className="bg-white/100 backdrop-blur-sm text-primary-700 hover:bg-primary-50/80"
+              size="lg"
               onClick={() => navigate('/competitions')}
             >
               Все соревнования
@@ -331,7 +332,7 @@ const HomePage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-10 bg-white rounded-lg shadow-sm">
+            <div className="text-center py-10 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm">
               <p className="text-lg text-neutral-600">
                 В настоящее время нет предстоящих соревнований. Проверьте позже!
               </p>
@@ -341,12 +342,12 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Почему мы */}
-      <section className="py-16 px-4 bg-white">
+      <section className="py-16 px-4 bg-transparent">
         <div className="container mx-auto max-w-6xl">
           <h2 className="text-3xl font-bold text-center mb-12">Почему ФСП</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in">
+            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in bg-white/95">
               <div className="bg-primary-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
                 <Award className="h-6 w-6 text-primary-600" />
               </div>
@@ -356,7 +357,7 @@ const HomePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in">
+            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in bg-white/95">
               <div className="bg-primary-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
                 <Users className="h-6 w-6 text-primary-600" />
               </div>
@@ -366,7 +367,7 @@ const HomePage: React.FC = () => {
               </p>
             </div>
 
-            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in">
+            <div className="p-6 border border-neutral-200 rounded-lg hover:shadow-md transition-all animate-fade-in bg-white/95">
               <div className="bg-primary-100 w-12 h-12 rounded-full flex items-center justify-center mb-4">
                 <svg className="h-6 w-6 text-primary-600" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5z"></path>
@@ -393,7 +394,7 @@ const HomePage: React.FC = () => {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button
-              className="bg-white text-primary-700 hover:bg-primary-50"
+              className="bg-white/100 text-primary-700 hover:bg-primary-50/80"
               size="lg"
               onClick={() => navigate('/register')}
             >

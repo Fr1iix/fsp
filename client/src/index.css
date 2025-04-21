@@ -6,9 +6,28 @@
   html {
     font-family: 'Inter', system-ui, sans-serif;
   }
-  
+
   body {
-    @apply bg-neutral-50 text-neutral-900 antialiased;
+    @apply text-neutral-900 antialiased;
+    background-image: url('./background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  /* Делаем основные контейнеры прозрачными */
+  #root,
+  main,
+  .min-h-screen,
+  .card,
+  .bg-white {
+    background-color: transparent !important;
+  }
+
+  /* Исключаем компоненты, которые должны сохранять белый фон */
+  .keep-white-bg {
+    background-color: white !important;
   }
 
   h1 {
@@ -56,7 +75,7 @@
   .card {
     @apply rounded-lg border border-neutral-200 bg-white shadow-sm transition-all hover:shadow-md;
   }
-  
+
   .badge {
     @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
