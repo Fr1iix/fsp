@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Filter, Calendar, MapPin, X } from 'lucide-react';
+import { Search, Filter, Calendar, MapPin, X, ClipboardList } from 'lucide-react';
 import { useCompetitionStore } from '../store/competitionStore.ts';
 import { useAuthStore } from '../store/authStore.ts';
 import { CompetitionDiscipline, CompetitionFormat } from '../types';
@@ -14,13 +14,13 @@ const CompetitionListPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
-  
+
   const { user } = useAuthStore();
   const { competitions, isLoading, error, fetchCompetitions, filters, setFilters } = useCompetitionStore();
-  
+
   const [searchTerm, setSearchTerm] = useState(queryParams.get('search') || '');
   const [filterOpen, setFilterOpen] = useState(false);
-  
+
   // Инициализация фильтров из URL-параметров
   useEffect(() => {
     const initialFilters = {
@@ -30,31 +30,31 @@ const CompetitionListPage: React.FC = () => {
       search: queryParams.get('search') || undefined,
       status: queryParams.get('status') || undefined,
     };
-    
+
     setFilters(initialFilters);
     fetchCompetitions(initialFilters);
   }, [location.search]);
-  
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     applyFilter({ search: searchTerm });
   };
-  
+
   const handleFilterChange = (name: string, value: string) => {
     applyFilter({ [name]: value === 'all' ? undefined : value });
   };
-  
+
   const clearFilters = () => {
     setSearchTerm('');
     setFilters({});
     navigate('/competitions');
     fetchCompetitions({});
   };
-  
+
   const applyFilter = (newFilter: Record<string, string | undefined>) => {
     const updatedFilters = { ...filters, ...newFilter };
     setFilters(updatedFilters);
-    
+
     // Обновляем URL
     const params = new URLSearchParams();
     Object.entries(updatedFilters).forEach(([key, value]) => {
@@ -62,17 +62,17 @@ const CompetitionListPage: React.FC = () => {
         params.set(key, value);
       }
     });
-    
+
     navigate(`/competitions?${params.toString()}`);
     fetchCompetitions(updatedFilters);
   };
-  
+
   const hasActiveFilters = Object.values(filters).some(value => value !== undefined);
-  
+
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 pt-24">
       <h1 className="text-3xl font-bold mb-8">Соревнования</h1>
-      
+
       <div className="flex flex-col md:flex-row gap-4 mb-8">
         <form onSubmit={handleSearchSubmit} className="flex-1">
           <Input
@@ -84,7 +84,7 @@ const CompetitionListPage: React.FC = () => {
             fullWidth
           />
         </form>
-        
+
         <div className="flex gap-2">
           <Button
             variant={filterOpen ? 'primary' : 'outline'}
@@ -93,18 +93,19 @@ const CompetitionListPage: React.FC = () => {
           >
             Фильтры
           </Button>
-          
-          {user && user.role !== 'athlete' && (
-            <Button 
+
+          {user && user.role === 'fsp' && (
+            <Button
               variant="accent"
-              onClick={() => navigate('/competitions/create')}
+              leftIcon={<ClipboardList className="h-4 w-4" />}
+              onClick={() => navigate('/competition/requests')}
             >
-              Создать соревнование
+              Посмотреть заявки
             </Button>
           )}
         </div>
       </div>
-      
+
       {filterOpen && (
         <Card className="mb-8 p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -119,7 +120,7 @@ const CompetitionListPage: React.FC = () => {
                 { value: 'federal', label: 'Федеральные' },
               ]}
             />
-            
+
             <Select
               label="Дисциплина"
               value={filters.discipline || 'all'}
@@ -133,7 +134,7 @@ const CompetitionListPage: React.FC = () => {
                 { value: 'drones', label: 'БПЛА' },
               ]}
             />
-            
+
             <Select
               label="Статус"
               value={filters.status || 'all'}
@@ -145,7 +146,7 @@ const CompetitionListPage: React.FC = () => {
                 { value: 'completed', label: 'Завершенные' },
               ]}
             />
-            
+
             {hasActiveFilters && (
               <Button
                 variant="outline"
@@ -159,13 +160,13 @@ const CompetitionListPage: React.FC = () => {
           </div>
         </Card>
       )}
-      
+
       {error && (
         <div className="bg-error-50 text-error-700 p-4 rounded-md mb-6">
           <p>{error}</p>
         </div>
       )}
-      
+
       {isLoading ? (
         <div className="flex justify-center py-16">
           <div className="animate-spin h-12 w-12 border-4 border-primary-500 rounded-full border-t-transparent"></div>
@@ -177,7 +178,7 @@ const CompetitionListPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+        <div className="text-center py-16 bg-white/95 rounded-lg shadow-xl">
           <p className="text-xl text-neutral-600 mb-4">
             Соревнования не найдены
           </p>

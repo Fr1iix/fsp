@@ -66,7 +66,7 @@ const HomePage: React.FC = () => {
             <div className="md:w-1/2 mt-10 md:mt-0 flex justify-center">
               <div className="relative w-full max-w-md">
                 <div className="absolute inset-0 bg-primary-500 rounded-lg opacity-20 blur-2xl animate-pulse"></div>
-                <Code className="w-72 h-72 mx-auto text-white opacity-90 animate-bounce-once" />
+                <Code className="w-72 h-72 mx-auto text-white opacity-90 animate-squeeze" />
               </div>
             </div>
           </div>

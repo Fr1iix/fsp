@@ -1,5 +1,5 @@
 const sequelize = require('../../db')
-const {DataTypes} = require('sequelize')
+const { DataTypes } = require('sequelize')
 
 const User = sequelize.define('user', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
@@ -24,10 +24,10 @@ const UserInfo = sequelize.define('user_info', {
 })
 
 const Results = sequelize.define('results', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    AmountOfCompetitions: {type: DataTypes.INTEGER},
-    middlerating: {type: DataTypes.INTEGER},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    AmountOfCompetitions: { type: DataTypes.INTEGER },
+    middlerating: { type: DataTypes.INTEGER },
 })
 
 const Team = sequelize.define('team', {
@@ -114,7 +114,9 @@ User.hasOne(UserInfo, {
     foreignKey: 'userId',
     onDelete: 'CASCADE'
 })
-UserInfo.belongsTo(User)
+UserInfo.belongsTo(User, {
+    foreignKey: 'userId'
+})
 
 User.hasOne(Results, {
     foreignKey: 'userId',
@@ -122,20 +124,20 @@ User.hasOne(Results, {
 })
 Results.belongsTo(User)
 
-User.hasOne(CompetitionAdmins, {
-    foreignKey: 'UserId',
+User.hasMany(CompetitionAdmins, {
+    foreignKey: 'userId',
     onDelete: 'CASCADE'
 })
 CompetitionAdmins.belongsTo(User)
 
-Competition.hasOne(CompetitionAdmins, {
-    foreignKey: 'UserId',
+Competition.hasMany(CompetitionAdmins, {
+    foreignKey: 'competitionId',
     onDelete: 'CASCADE'
 })
 CompetitionAdmins.belongsTo(Competition)
 
-Adress.hasOne(Competition, {
-    foreignKey: 'AddressId',
+Adress.hasMany(Competition, {
+    foreignKey: 'addressId',
     onDelete: 'CASCADE'
 })
 Competition.belongsTo(Adress)
@@ -152,8 +154,8 @@ User.hasOne(Teammembers, {
 })
 Teammembers.belongsTo(User)
 
-Team.hasOne(Teammembers, {
-    foreignKey: 'TeamId',
+Team.hasMany(Teammembers, {
+    foreignKey: 'teamId',
     onDelete: 'CASCADE'
 })
 Teammembers.belongsTo(Team)
@@ -213,7 +215,12 @@ Team.hasOne(Application, {
 Application.belongsTo(Team)
 
 module.exports = {
-    sequelize,
     User,
-    UserInfo
+    UserInfo,
+    Results,
+    Team,
+    Competition,
+    CompetitionAdmins,
+    Teammembers,
+    Adress
 }

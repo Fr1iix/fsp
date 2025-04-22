@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Code } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
@@ -42,40 +42,54 @@ const RegisterPage: React.FC = () => {
     try {
       setEmailCheckLoading(true);
       setRegistrationError(null);
+      setEmailExistsError(null);
 
       // Проверяем существование email перед регистрацией
-      const emailExists = await authAPI.checkEmailExists(data.email);
+      console.log('Checking if email exists:', data.email);
+      try {
+        const emailExists = await authAPI.checkEmail(data.email);
+        console.log('Email exists check result:', emailExists);
 
-      if (emailExists) {
-        setEmailExistsError('Пользователь с таким email уже зарегистрирован');
-        setEmailCheckLoading(false);
-        return;
+        if (emailExists) {
+          setEmailExistsError('Пользователь с таким email уже зарегистрирован');
+          setEmailCheckLoading(false);
+          return;
+        }
+      } catch (checkError) {
+        console.error('Error checking email:', checkError);
+        // Если произошла ошибка при проверке email, продолжаем регистрацию
+        // так как сервер может перепроверить это
       }
 
       setEmailExistsError(null);
       setEmailCheckLoading(false);
 
       // Если email не существует, регистрируем пользователя
+      console.log('Registering new user:', data.email);
       await registerUser(data.email, data.password, 'athlete');
+      console.log('Registration successful, navigating to profile');
 
-      // useEffect выше перенаправит пользователя, когда user будет установлен
-
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Registration error:', error.message);
+      } else {
+        console.error('Registration error:', error);
+      }
       setEmailCheckLoading(false);
-      console.error('Registration error:', error);
       setRegistrationError(
-        error?.response?.data?.message ||
-        'Ошибка при регистрации. Пожалуйста, попробуйте позже.'
+        error instanceof Error ? error.message : 'Ошибка при регистрации. Пожалуйста, попробуйте позже.'
       );
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
+  
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
+        <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
           <h1 className="text-3xl font-bold">Регистрация</h1>
-          <p className="text-primary-600 mt-2">
+          <p>
             Создайте учетную запись в Федерации спортивного программирования
           </p>
         </div>
