@@ -2,10 +2,21 @@ const Router = require('express')
 const router = new Router()
 const userRouter = require('./userRouter')
 const userInfoRouter = require('./userInfoRouter')
-
+const ResultRouter = require('./ResultsRouter')
+const TeamRouter = require('./ResultsRouter')
+const CompetitionRouter = require('./ResultsRouter')
+const CompetitionAdminsRouter = require('./ResultsRouter')
+const TeammembersRouter = require('./ResultsRouter')
+const AdressRouter = require('./ResultsRouter')
 
 router.use('/user', userRouter)
 router.use('/userInfo', userInfoRouter)
 
+router.use('/result', ResultRouter)
+router.use('/team', TeamRouter)
+router.use('/competirion', CompetitionRouter)
+router.use('/CompetitionAdmins', CompetitionAdminsRouter)
+router.use('/TeamMembers', TeammembersRouter)
+router.use('/adress', AdressRouter)
 
 module.exports = router
