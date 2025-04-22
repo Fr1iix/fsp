@@ -14,9 +14,10 @@ interface RegistrationWithCompetition extends CompetitionRegistration {
 }
 
 // Обновим компонент для поддержки правильных типов для badge
-const ProfileBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ProfileBadge: React.FC<{ children: React.ReactNode; icon?: React.ReactNode }> = ({ children, icon }) => {
   return (
-    <span className="px-3 py-1 text-sm rounded-full bg-white text-neutral-800 shadow-sm flex items-center gap-1">
+    <span className="px-3 py-1.5 text-sm rounded-full bg-white text-neutral-800 shadow-sm flex items-center gap-2 transition-all hover:shadow">
+      {icon}
       {children}
     </span>
   );
@@ -113,7 +114,7 @@ const ProfilePage: React.FC = () => {
 
   if (isUserLoading || !user) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-16 flex items-center justify-center">
+      <div className="h-screen bg-slate-50 flex items-center justify-center">
         <div className="animate-spin h-12 w-12 border-4 border-primary-500 rounded-full border-t-transparent"></div>
       </div>
     );
@@ -133,40 +134,59 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto max-w-5xl px-4 py-8 pt-24">
         {/* Верхняя часть профиля */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-400 rounded-lg shadow-lg mb-6 p-6 sm:p-8">
-          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-            <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center shadow-lg">
-              <User className="h-16 w-16 text-primary-600" />
-            </div>
+        <div className="bg-gradient-to-br from-primary-600 via-primary-500 to-primary-400 rounded-xl shadow-lg mb-8 overflow-hidden">
+          <div className="relative p-8">
+            {/* Декоративные элементы */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-2xl"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3 blur-xl"></div>
 
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                {userInfo?.firstName || 'Имя'} {userInfo?.lastName || 'Фамилия'}
-              </h1>
-              <p className="text-primary-100 mb-4">{getRoleName(user.role)}</p>
-
-              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                <ProfileBadge>
-                  <Mail className="h-4 w-4 mr-1" /> {user.email}
-                </ProfileBadge>
-
-                {userInfo?.phone && (
-                  <ProfileBadge>
-                    <Phone className="h-4 w-4 mr-1" /> {userInfo.phone}
-                  </ProfileBadge>
-                )}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8 relative z-10">
+              <div className="w-32 h-32 rounded-full bg-white p-1.5 flex items-center justify-center shadow-xl">
+                <div className="w-full h-full rounded-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
+                  <User className="h-16 w-16 text-primary-600" />
+                </div>
               </div>
-            </div>
 
-            <div>
-              <Button
-                variant="outline"
-                className="!bg-white shadow-md"
-                leftIcon={<Edit3 className="h-4 w-4" />}
-                onClick={() => navigate('/profile/edit')}
-              >
-                Редактировать
-              </Button>
+              <div className="flex-1 text-center sm:text-left">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  {userInfo?.lastName || 'Фамилия'} {userInfo?.firstName || 'Имя'} {userInfo?.middleName || ''}
+                </h1>
+                <p className="text-primary-100 mb-4 font-medium">{getRoleName(user.role)}</p>
+
+                <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-y-3 gap-x-6 mt-5 text-white/90">
+                  <div className="flex items-center">
+                    <Mail className="h-4 w-4 mr-2 text-primary-100" />
+                    <span className="text-sm">{user.email}</span>
+                  </div>
+
+                  {userInfo?.birthday && (
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2 text-primary-100" />
+                      <span className="text-sm">
+                        {new Date(userInfo.birthday).toLocaleDateString('ru-RU')}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center">
+                    <Clock className="h-4 w-4 mr-2 text-primary-100" />
+                    <span className="text-sm">
+                      Регистрация: {new Date(user.createdAt).toLocaleDateString('ru-RU')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Button
+                  variant="outline"
+                  className="!bg-white/95 shadow-md hover:!bg-white transition-all"
+                  leftIcon={<Edit3 className="h-4 w-4" />}
+                  onClick={() => navigate('/profile/edit')}
+                >
+                  Редактировать
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -176,78 +196,82 @@ const ProfilePage: React.FC = () => {
           {/* Левая колонка - детали пользователя */}
           <div className="lg:col-span-1 space-y-6">
             {/* Подробная информация */}
-            <Card className="overflow-hidden !bg-white shadow">
-              <CardHeader className="bg-neutral-50 border-b border-neutral-100">
-                <CardTitle className="text-lg">Личная информация</CardTitle>
+            <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4 rounded-xl">
+                <CardTitle className="text-lg font-semibold text-neutral-800 text-center">Личная информация</CardTitle>
               </CardHeader>
 
               <CardContent className="p-0">
-                <ul className="divide-y divide-neutral-100">
-                  {userInfo?.middleName && (
-                    <li className="p-4 flex items-center">
-                      <span className="text-neutral-500 w-1/3">Отчество:</span>
-                      <span className="font-medium">{userInfo.middleName}</span>
-                    </li>
-                  )}
+                {(userInfo?.phone || userInfo?.gender || userInfo?.address || userInfo?.github) ? (
+                  <ul className="divide-y divide-neutral-100">
+                    {userInfo?.phone && (
+                      <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
+                        <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">Телефон:</span>
+                        <span className="text-neutral-800 flex items-center">
+                          <Phone className="h-4 w-4 mr-2 text-primary-500 flex-shrink-0" />
+                          {userInfo.phone}
+                        </span>
+                      </li>
+                    )}
 
-                  <li className="p-4 flex items-center">
-                    <span className="text-neutral-500 w-1/3">Пол:</span>
-                    <span className="font-medium">{userInfo?.gender || 'Не указано'}</span>
-                  </li>
+                    {userInfo?.gender && (
+                      <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
+                        <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">Пол:</span>
+                        <span className="text-neutral-800">{userInfo.gender}</span>
+                      </li>
+                    )}
 
-                  {userInfo?.birthday && (
-                    <li className="p-4 flex items-center">
-                      <span className="text-neutral-500 w-1/3">Дата рождения:</span>
-                      <span className="font-medium">
-                        {new Date(userInfo.birthday).toLocaleDateString('ru-RU')}
-                      </span>
-                    </li>
-                  )}
+                    {userInfo?.address && (
+                      <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
+                        <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">Адрес:</span>
+                        <span className="flex items-center text-neutral-800">
+                          <MapPin className="h-4 w-4 mr-2 text-primary-500 flex-shrink-0" />
+                          <span className="break-words">{userInfo.address}</span>
+                        </span>
+                      </li>
+                    )}
 
-                  {userInfo?.address && (
-                    <li className="p-4 flex items-center">
-                      <span className="text-neutral-500 w-1/3">Адрес:</span>
-                      <span className="font-medium flex items-center">
-                        <MapPin className="h-4 w-4 mr-1 text-neutral-400" />
-                        {userInfo.address}
-                      </span>
-                    </li>
-                  )}
-
-                  {userInfo?.github && (
-                    <li className="p-4 flex items-center">
-                      <span className="text-neutral-500 w-1/3">GitHub:</span>
-                      <a
-                        href={`https://github.com/${userInfo.github}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-primary-600 flex items-center hover:underline"
-                      >
-                        <Github className="h-4 w-4 mr-1" />
-                        {userInfo.github}
-                      </a>
-                    </li>
-                  )}
-
-                  <li className="p-4 flex items-center">
-                    <span className="text-neutral-500 w-1/3">Дата регистрации:</span>
-                    <span className="font-medium">
-                      {new Date(user.createdAt).toLocaleDateString('ru-RU')}
-                    </span>
-                  </li>
-                </ul>
+                    {userInfo?.github && (
+                      <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
+                        <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">GitHub:</span>
+                        <a
+                          href={`https://github.com/${userInfo.github}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 flex items-center hover:underline"
+                        >
+                          <Github className="h-4 w-4 mr-2 flex-shrink-0" />
+                          {userInfo.github}
+                        </a>
+                      </li>
+                    )}
+                  </ul>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
+                    <User className="h-12 w-12 text-neutral-300 mb-3" />
+                    <p className="text-neutral-500 mb-2">Информация о пользователе отсутствует</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => navigate('/profile/edit')}
+                    >
+                      Добавить информацию
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* О себе */}
             {userInfo?.discription && (
-              <Card className="overflow-hidden !bg-white shadow">
-                <CardHeader className="bg-neutral-50 border-b border-neutral-100">
-                  <CardTitle className="text-lg">О себе</CardTitle>
+              <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
+                <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4">
+                  <CardTitle className="text-lg font-semibold text-neutral-800">О себе</CardTitle>
                 </CardHeader>
 
-                <CardContent className="p-4">
-                  <p className="text-neutral-700 whitespace-pre-line">
+                <CardContent className="p-5">
+                  <p className="text-neutral-700 whitespace-pre-line leading-relaxed">
                     {userInfo.discription}
                   </p>
                 </CardContent>
@@ -258,14 +282,19 @@ const ProfilePage: React.FC = () => {
           {/* Правая колонка - достижения и активность */}
           <div className="lg:col-span-2 space-y-6">
             {/* Достижения */}
-            <Card className="overflow-hidden !bg-white shadow">
-              <CardHeader className="bg-neutral-50 border-b border-neutral-100 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
+            <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
+              <CardHeader className="rounded-xl bg-neutral-50 border-b border-neutral-100 py-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold text-neutral-800 flex items-center">
                   <Award className="h-5 w-5 mr-2 text-primary-600" />
                   Достижения
                 </CardTitle>
 
-                <Button variant="outline" size="sm" onClick={() => navigate('/achievements')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hover:bg-primary-50"
+                  onClick={() => navigate('/achievements')}
+                >
                   Все достижения
                 </Button>
               </CardHeader>
@@ -276,24 +305,31 @@ const ProfilePage: React.FC = () => {
                     <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-neutral-500">
-                    <Award className="h-14 w-14 mx-auto text-neutral-300 mb-3" />
-                    <p className="text-lg font-medium mb-1">У вас пока нет достижений</p>
-                    <p className="text-sm">Участвуйте в соревнованиях, чтобы получить их!</p>
+                  <div className="text-center py-10 text-neutral-500">
+                    <div className="bg-neutral-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Award className="h-12 w-12 text-neutral-300" />
+                    </div>
+                    <p className="text-lg font-medium mb-2 text-neutral-700">У вас пока нет достижений</p>
+                    <p className="text-sm max-w-md mx-auto">Участвуйте в соревнованиях, чтобы получить награды и отметки о достижениях</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
             {/* Предстоящие соревнования */}
-            <Card className="overflow-hidden !bg-white shadow">
-              <CardHeader className="bg-neutral-50 border-b border-neutral-100 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg flex items-center">
+            <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
+              <CardHeader className="rounded-xl bg-neutral-50 border-b border-neutral-100 py-4 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg font-semibold text-neutral-800 flex items-center">
                   <Calendar className="h-5 w-5 mr-2 text-primary-600" />
                   Мои соревнования
                 </CardTitle>
 
-                <Button variant="outline" size="sm" onClick={() => navigate('/competitions')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hover:bg-primary-50"
+                  onClick={() => navigate('/competitions')}
+                >
                   Все соревнования
                 </Button>
               </CardHeader>
@@ -304,12 +340,14 @@ const ProfilePage: React.FC = () => {
                     <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-neutral-500">
-                    <Calendar className="h-14 w-14 mx-auto text-neutral-300 mb-3" />
-                    <p className="text-lg font-medium mb-1">Вы не зарегистрированы на соревнования</p>
-                    <p className="text-sm">Найдите интересное соревнование и примите участие!</p>
+                  <div className="text-center py-10 text-neutral-500">
+                    <div className="bg-neutral-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-12 w-12 text-neutral-300" />
+                    </div>
+                    <p className="text-lg font-medium mb-2 text-neutral-700">Вы не зарегистрированы на соревнования</p>
+                    <p className="text-sm max-w-md mx-auto mb-6">Найдите интересное соревнование и примите участие, чтобы проявить свои навыки!</p>
                     <Button
-                      className="mt-4"
+                      className="px-6 shadow-sm hover:shadow transition-all"
                       onClick={() => navigate('/competitions')}
                     >
                       Найти соревнования
