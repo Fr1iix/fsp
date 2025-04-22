@@ -5,8 +5,8 @@ const ApiError = require('../errorr/ApiError');
 class UserInfoController {
     async create(req, res, next) {
         try {
-            let {firstName,lastname,middleName,birthday,gender,address,phone} = req.body
-            const userinfo = await UserInfo.create({firstName,lastname,middleName,birthday,gender,address,phone});
+            let {UserId, firstName,lastname,middleName,birthday,gender,address,phone, github, discription, AddressId} = req.body
+            const userinfo = await UserInfo.create({UserId, firstName,lastname,middleName,birthday,gender,address,phone, github, discription, AddressId});
             return res.json(userinfo)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -21,7 +21,7 @@ class UserInfoController {
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            firstName,lastname,middleName,birthday,gender,address,phone
+            UserId, firstName,lastname,middleName,birthday,gender,address,phone, github, discription, AddressId
         } = req.body;
 
 
@@ -32,6 +32,7 @@ class UserInfoController {
                 return res.status(404).json({error: 'User was not found'});
             }
 
+            userinfo.UserId = UserId;
             userinfo.firstName = firstName;
             userinfo.lastname = lastname;
             userinfo.middleName = middleName;
@@ -39,6 +40,9 @@ class UserInfoController {
             userinfo.gender = gender;
             userinfo.address = address;
             userinfo.phone = phone;
+            userinfo.github = github;
+            userinfo.discription = discription;
+            userinfo.AddressId = AddressId;
 
 
             await userinfo.save();

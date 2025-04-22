@@ -36,8 +36,8 @@ class TeamController {
 
     async create(req, res, next) {
         try {
-            let {UserId, CompetitionId, name, discription, points, result} = req.body
-            const team = await Team.create({UserId, CompetitionId, name, discription, points, result});
+            let { CompetitionId, name, discription, points, result, teammembersId} = req.body
+            const team = await Team.create({CompetitionId, name, discription, points, result, teammembersId});
             return res.status(200).json(team)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -52,7 +52,7 @@ class TeamController {
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            UserId, CompetitionId, name, discription, points, result
+            CompetitionId, name, discription, points, result, teammembersId
         } = req.body;
 
 
@@ -62,14 +62,14 @@ class TeamController {
             if (!team) {
                 return res.status(404).json({error: 'Team was not found'});
             }
-
-            team.UserId = UserId;
+            
             team.CompetitionId = CompetitionId;
             team.name = name;
             team.discription = discription;
             team.points = points;
             team.result = result;
-            
+            team.teammembersId = teammembersId;
+
             await team.save();
 
             return res.status(200).json(team);

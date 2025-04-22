@@ -6,7 +6,7 @@ const User = sequelize.define('user', {
     email: {type: DataTypes.STRING, unique: true},
     password: {type: DataTypes.STRING},
     role: {type: DataTypes.STRING, defaultValue: 'user'},
-    TeammembersId: {type: DataTypes.INTEGER, foreignKey: true},
+    idRegions: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
 const UserInfo = sequelize.define('user_info', {
@@ -15,12 +15,12 @@ const UserInfo = sequelize.define('user_info', {
     firstName: {type: DataTypes.STRING, allowNull: false,},
     middleName: {type: DataTypes.STRING, allowNull: false,},
     lastName: {type: DataTypes.STRING, allowNull: false,},
-    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
     birthday: {type: DataTypes.DATE, allowNull: false,},
     phone: {type: DataTypes.STRING},
     gender: {type: DataTypes.STRING, allowNull: false,},
     github: {type: DataTypes.STRING},
-    discription: {type: DataTypes.STRING}
+    discription: {type: DataTypes.STRING},
+    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
 const Results = sequelize.define('results', {
@@ -32,46 +32,83 @@ const Results = sequelize.define('results', {
 
 const Team = sequelize.define('team', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
     CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
     name: {type: DataTypes.STRING, unique: true},
     discription: {type: DataTypes.STRING, defaultValue: " "},
     points: {type: DataTypes.INTEGER},
     result: {type: DataTypes.INTEGER},
+    teammembersId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
 const Competition = sequelize.define('competition', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
-    discipline: {type: DataTypes.STRING, defaultValue: 'Продуктовое программирование'},
+    disciplineId: {type: DataTypes.INTEGER, foreignKey: true}, 
     name: {type: DataTypes.STRING, unique: true},
-    startdate: {type: DataTypes.DATE, defaultValue: Date.now()},
-    enddate: {type: DataTypes.DATE,},
     discription: {type: DataTypes.STRING},
     format: {type: DataTypes.STRING},
     type: {type: DataTypes.STRING, defaultValue: 'Открытые'},
-    status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'}    
+    startdate: {type: DataTypes.DATE, defaultValue: Date.now()},
+    enddate: {type: DataTypes.DATE,},
+    startdate_cometition: {type: DataTypes.DATE,},
+    enddate_cometition: {type: DataTypes.DATE,},   
+    maxParticipants: {type: DataTypes.INTEGER,},
+    status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
+    AddressId: {type: DataTypes.INTEGER, foreignKey: true},   
+    regionId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
 const CompetitionAdmins = sequelize.define('competitionadmins', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
     UserId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
 const Teammembers = sequelize.define('teammembers', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    is_capitan: {type: DataTypes.BOOLEAN , defaultValue:false},
     UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    TeamId: {type: DataTypes.INTEGER, foreignKey: true},
+    TeamId: {type: DataTypes.INTEGER, foreignKey: true},    
 })
 
 const Adress = sequelize.define('address', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    region: {type: DataTypes.STRING},
+    regionId: {type: DataTypes.INTEGER, foreignKey: true},
     town: {type: DataTypes.STRING},
     street: {type: DataTypes.STRING},
 })
 
+const Projects = sequelize.define("projects", {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    UserId: {type: DataTypes.INTEGER, foreignKey: true},
+    name: {type: DataTypes.STRING, unique: true},
+    files: {type: DataTypes.STRING, unique: true},
+})
+
+const Discipline = sequelize.define("discipline", {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    name: {type: DataTypes.STRING, unique: true},
+    discription: {type: DataTypes.STRING},
+    competitionsCount :  {type: DataTypes.INTEGER, defaultValue: 0},
+    participantsCount: {type: DataTypes.INTEGER, defaultValue: 0},
+    progres: {type: DataTypes.INTEGER,}
+})
+
+const Regions = sequelize.define("regions", {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    name: {type: DataTypes.STRING, unique: true},
+})
+
+const CompetitionRegion = sequelize.define("competitionRegion", {
+    competitionId: {type: DataTypes.INTEGER, foreignKey: true},
+    regionId: {type: DataTypes.INTEGER, foreignKey: true},
+})
+
+const Application = sequelize.define("application", {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    UserId: {type: DataTypes.INTEGER, foreignKey: true},
+    TeamId: {type: DataTypes.INTEGER, foreignKey: true},
+    CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
+    status: {type: DataTypes.STRING,},
+    UUID: {type: DataTypes.STRING},
+})
 
 User.hasOne(UserInfo, {
     foreignKey: 'userId',
@@ -109,12 +146,6 @@ Competition.hasMany(Team, {
 })
 Team.belongsTo(Competition)
 
-Team.hasMany(User, {
-    foreignKey: 'TeamId',
-    onDelete: 'CASCADE'
-})
-User.belongsTo(Team)
-
 User.hasOne(Teammembers, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
@@ -127,6 +158,59 @@ Team.hasOne(Teammembers, {
 })
 Teammembers.belongsTo(Team)
 
+User.hasOne(Projects, {
+    foreignKey: 'UserId',
+    onDelete: 'CASCADE'
+})
+Projects.belongsTo(User)
+
+Discipline.hasOne(Competition, {
+    foreignKey: 'disciplineId',
+    onDelete: 'CASCADE'
+})
+Competition.belongsTo(Discipline)
+
+Regions.hasOne(User, {
+    foreignKey: 'idRegions',
+    onDelete: 'CASCADE'
+})
+User.belongsTo(Regions)
+
+Regions.hasOne(Adress, {
+    foreignKey: 'regionId',
+    onDelete: 'CASCADE'
+})
+Adress.belongsTo(Regions)
+
+Competition.hasOne(CompetitionRegion, {
+    foreignKey: 'competitionId',
+    onDelete: 'CASCADE'
+})
+CompetitionAdmins.belongsTo(Competition)
+
+Regions.hasOne(CompetitionRegion, {
+    foreignKey: 'regionId',
+    onDelete: 'CASCADE'
+})
+CompetitionAdmins.belongsTo(Regions)
+
+User.hasOne(Application, {
+    foreignKey: 'UserId',
+    onDelete: 'CASCADE'
+})
+Application.belongsTo(User)
+
+Competition.hasOne(Application, {
+    foreignKey: 'CompetitionId',
+    onDelete: 'CASCADE'
+})
+Application.belongsTo(Competition)
+
+Team.hasOne(Application, {
+    foreignKey: 'TeamId',
+    onDelete: 'CASCADE'
+})
+Application.belongsTo(Team)
 
 module.exports = {
     sequelize,
