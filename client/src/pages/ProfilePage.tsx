@@ -13,23 +13,24 @@ interface RegistrationWithCompetition extends CompetitionRegistration {
   competition: Competition;
 }
 
-// Обновим компонент для поддержки правильных типов для badge
-const ProfileBadge: React.FC<{ children: React.ReactNode; icon?: React.ReactNode }> = ({ children, icon }) => {
-  return (
-    <span className="px-3 py-1.5 text-sm rounded-full bg-white text-neutral-800 shadow-sm flex items-center gap-2 transition-all hover:shadow">
-      {icon}
-      {children}
-    </span>
-  );
-};
-
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
   const { user, userInfo, isLoading: isUserLoading, loadUserInfo } = useAuthStore();
-  const { userRegistrations, fetchUserRegistrations, isLoading: isRegLoading } = useRegistrationStore();
+  const { userRegistrations, fetchUserRegistrations } = useRegistrationStore();
+
+  // Добавляем правильную типизацию для achievements
+  interface Achievement {
+    id: string;
+    competitionId: string;
+    userId: string;
+    place: number;
+    isConfirmed: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }
 
   const [registrationsWithCompetitions, setRegistrationsWithCompetitions] = useState<RegistrationWithCompetition[]>([]);
-  const [achievements, setAchievements] = useState<any[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -83,34 +84,6 @@ const ProfilePage: React.FC = () => {
       loadData();
     }
   }, [user, dataLoaded, loadData]);
-
-  // Получаем статус регистрации в виде бейджа
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { text: string; variant: React.ComponentProps<typeof Badge>['variant'] }> = {
-      pending: { text: 'На рассмотрении', variant: 'warning' },
-      approved: { text: 'Одобрена', variant: 'success' },
-      rejected: { text: 'Отклонена', variant: 'error' },
-      withdrawn: { text: 'Отозвана', variant: 'neutral' },
-    };
-
-    const { text, variant } = statusMap[status] || { text: 'Неизвестно', variant: 'neutral' };
-
-    return <Badge variant={variant}>{text}</Badge>;
-  };
-
-  // Получаем иконку статуса регистрации
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="h-5 w-5 text-success-500" />;
-      case 'rejected':
-        return <XCircle className="h-5 w-5 text-error-500" />;
-      case 'pending':
-        return <Clock className="h-5 w-5 text-warning-500" />;
-      default:
-        return <Clock className="h-5 w-5 text-neutral-500" />;
-    }
-  };
 
   if (isUserLoading || !user) {
     return (
@@ -356,6 +329,39 @@ const ProfilePage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Добавляем использование registrationsWithCompetitions и achievements */}
+            <div className="space-y-6">
+              {/* Секция регистраций */}
+              {registrationsWithCompetitions.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Регистрации на соревнования</h3>
+                  <div className="space-y-4">
+                    {registrationsWithCompetitions.map((reg) => (
+                      <div key={reg.id} className="p-4 bg-white rounded-lg shadow">
+                        <h4>{reg.competition.title}</h4>
+                        <p>Статус: {reg.status}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Секция достижений */}
+              {achievements.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Достижения</h3>
+                  <div className="space-y-4">
+                    {achievements.map((achievement) => (
+                      <div key={achievement.id} className="p-4 bg-white rounded-lg shadow">
+                        <p>Место: {achievement.place}</p>
+                        <p>Статус: {achievement.isConfirmed ? 'Подтверждено' : 'На проверке'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
