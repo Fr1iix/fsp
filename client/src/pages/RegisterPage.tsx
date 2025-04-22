@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Code } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
@@ -84,10 +84,12 @@ const RegisterPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
+  
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
+        <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
           <h1 className="text-3xl font-bold">Регистрация</h1>
-          <p className="text-primary-600 mt-2">
+          <p>
             Создайте учетную запись в Федерации спортивного программирования
           </p>
         </div>
