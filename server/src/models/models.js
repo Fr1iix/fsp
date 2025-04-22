@@ -1,5 +1,5 @@
 const sequelize = require('../../db')
-const { DataTypes } = require('sequelize')
+const {DataTypes} = require('sequelize')
 
 const User = sequelize.define('user', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
@@ -24,10 +24,10 @@ const UserInfo = sequelize.define('user_info', {
 })
 
 const Results = sequelize.define('results', {
-    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    UserId: { type: DataTypes.INTEGER, foreignKey: true },
-    AmountOfCompetitions: { type: DataTypes.INTEGER },
-    middlerating: { type: DataTypes.INTEGER },
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+    UserId: {type: DataTypes.INTEGER, foreignKey: true},
+    AmountOfCompetitions: {type: DataTypes.INTEGER},
+    middlerating: {type: DataTypes.INTEGER},
 })
 
 const Team = sequelize.define('team', {
@@ -42,7 +42,11 @@ const Team = sequelize.define('team', {
 
 const Competition = sequelize.define('competition', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
+<<<<<<< HEAD
     disciplineId: {type: DataTypes.INTEGER, foreignKey: true}, 
+=======
+    disciplineId: {type: DataTypes.INTEGER, foreignKey: true},
+>>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
     name: {type: DataTypes.STRING, unique: true},
     discription: {type: DataTypes.STRING},
     format: {type: DataTypes.STRING},
@@ -50,10 +54,17 @@ const Competition = sequelize.define('competition', {
     startdate: {type: DataTypes.DATE, defaultValue: Date.now()},
     enddate: {type: DataTypes.DATE,},
     startdate_cometition: {type: DataTypes.DATE,},
+<<<<<<< HEAD
     enddate_cometition: {type: DataTypes.DATE,},   
     maxParticipants: {type: DataTypes.INTEGER,},
     status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
     AddressId: {type: DataTypes.INTEGER, foreignKey: true},   
+=======
+    enddate_cometition: {type: DataTypes.DATE,},
+    maxParticipants: {type: DataTypes.INTEGER,},
+    status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
+    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
+>>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
     regionId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
@@ -65,7 +76,11 @@ const CompetitionAdmins = sequelize.define('competitionadmins', {
 const Teammembers = sequelize.define('teammembers', {
     is_capitan: {type: DataTypes.BOOLEAN , defaultValue:false},
     UserId: {type: DataTypes.INTEGER, foreignKey: true},
+<<<<<<< HEAD
     TeamId: {type: DataTypes.INTEGER, foreignKey: true},    
+=======
+    TeamId: {type: DataTypes.INTEGER, foreignKey: true},
+>>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
 })
 
 const Adress = sequelize.define('address', {
@@ -91,6 +106,11 @@ const Discipline = sequelize.define("discipline", {
     progres: {type: DataTypes.INTEGER,}
 })
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
 const Regions = sequelize.define("regions", {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     name: {type: DataTypes.STRING, unique: true},
@@ -114,9 +134,7 @@ User.hasOne(UserInfo, {
     foreignKey: 'userId',
     onDelete: 'CASCADE'
 })
-UserInfo.belongsTo(User, {
-    foreignKey: 'userId'
-})
+UserInfo.belongsTo(User)
 
 User.hasOne(Results, {
     foreignKey: 'userId',
@@ -124,20 +142,20 @@ User.hasOne(Results, {
 })
 Results.belongsTo(User)
 
-User.hasMany(CompetitionAdmins, {
-    foreignKey: 'userId',
+User.hasOne(CompetitionAdmins, {
+    foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
 CompetitionAdmins.belongsTo(User)
 
-Competition.hasMany(CompetitionAdmins, {
-    foreignKey: 'competitionId',
+Competition.hasOne(CompetitionAdmins, {
+    foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
 CompetitionAdmins.belongsTo(Competition)
 
-Adress.hasMany(Competition, {
-    foreignKey: 'addressId',
+Adress.hasOne(Competition, {
+    foreignKey: 'AddressId',
     onDelete: 'CASCADE'
 })
 Competition.belongsTo(Adress)
@@ -154,8 +172,8 @@ User.hasOne(Teammembers, {
 })
 Teammembers.belongsTo(User)
 
-Team.hasMany(Teammembers, {
-    foreignKey: 'teamId',
+Team.hasOne(Teammembers, {
+    foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
 Teammembers.belongsTo(Team)
@@ -215,12 +233,7 @@ Team.hasOne(Application, {
 Application.belongsTo(Team)
 
 module.exports = {
+    sequelize,
     User,
-    UserInfo,
-    Results,
-    Team,
-    Competition,
-    CompetitionAdmins,
-    Teammembers,
-    Adress
+    UserInfo
 }
