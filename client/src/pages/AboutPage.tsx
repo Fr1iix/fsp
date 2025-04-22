@@ -36,7 +36,7 @@ const AboutPage: React.FC = () => {
 
 			{/* Цели и дисциплины */}
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-				<div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+				<div className="bg-white/95 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
 					<div className="bg-blue-600 py-4 px-6">
 						<h3 className="text-xl font-bold text-white">Наши цели</h3>
 					</div>
@@ -60,7 +60,7 @@ const AboutPage: React.FC = () => {
 					</div>
 				</div>
 
-				<div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+				<div className="bg-white/95 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
 					<div className="bg-indigo-600 py-4 px-6">
 						<h3 className="text-xl font-bold text-white">Наши дисциплины</h3>
 					</div>
