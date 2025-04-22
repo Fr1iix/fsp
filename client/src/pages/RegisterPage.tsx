@@ -69,13 +69,15 @@ const RegisterPage: React.FC = () => {
       await registerUser(data.email, data.password, 'athlete');
       console.log('Registration successful, navigating to profile');
 
-      // useEffect выше перенаправит пользователя, когда user будет установлен
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Registration error:', error.message);
+      } else {
+        console.error('Registration error:', error);
+      }
       setEmailCheckLoading(false);
-      console.error('Registration error:', error);
       setRegistrationError(
-        error?.response?.data?.message ||
-        'Ошибка при регистрации. Пожалуйста, попробуйте позже.'
+        error instanceof Error ? error.message : 'Ошибка при регистрации. Пожалуйста, попробуйте позже.'
       );
     }
   };
