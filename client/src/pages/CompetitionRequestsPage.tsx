@@ -204,24 +204,32 @@ const CompetitionRequestsPage: React.FC = () => {
 	}
 
 	return (
-		<div className="min-h-screen bg-slate-50 pt-20">
+		<div className="min-h-screen bg-slate-50 pt-20 pb-12">
 			<div className="container mx-auto max-w-5xl px-4 py-8">
-				<div className="mb-6">
+				<div className="mb-10">
 					<button
 						onClick={() => navigate(-1)}
-						className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors"
+						className="inline-flex items-center text-primary-600 hover:text-primary-700 transition-colors mb-4"
 					>
 						<ArrowLeft className="h-4 w-4 mr-2" />
 						Назад
 					</button>
+
+					<div className="flex items-center justify-between">
+						<h1 className="text-3xl font-bold text-neutral-800">Заявки на соревнования</h1>
+						<Badge variant="primary" className="text-sm px-3 py-1">
+							{filteredApplications.length} заявок
+						</Badge>
+					</div>
+					<p className="text-neutral-500 mt-2">
+						Просмотр и управление заявками от региональных представителей на создание соревнований
+					</p>
 				</div>
 
-				<h1 className="text-2xl font-bold text-neutral-800 mb-6">Заявки на соревнования</h1>
-
 				<div className="mb-8">
-					<Card className="overflow-hidden border-none shadow-sm">
+					<Card className="overflow-hidden border-none shadow-md">
 						<CardContent className="p-6">
-							<div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+							<div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
 								<form onSubmit={handleSearch} className="flex-1 w-full md:w-auto">
 									<div className="relative">
 										<Input
@@ -229,13 +237,25 @@ const CompetitionRequestsPage: React.FC = () => {
 											placeholder="Поиск по названию, автору или региону..."
 											value={searchTerm}
 											onChange={(e) => setSearchTerm(e.target.value)}
-											className="pl-10 pr-4 py-2 w-full"
+											className="pl-10 pr-4 py-2.5 w-full rounded-lg shadow-sm border-neutral-200 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
 										/>
-										<Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+										<Search className="absolute left-3 top-3 h-4 w-4 text-neutral-400" />
+										{searchTerm && (
+											<button
+												type="button"
+												className="absolute right-3 top-3 text-neutral-400 hover:text-neutral-600"
+												onClick={() => {
+													setSearchTerm('');
+													filterApplications('', statusFilter);
+												}}
+											>
+												<XCircle className="h-4 w-4" />
+											</button>
+										)}
 									</div>
 								</form>
 
-								<div className="flex gap-2 w-full md:w-auto">
+								<div className="flex flex-wrap gap-2 w-full md:w-auto">
 									<Button
 										variant={statusFilter === 'all' ? 'primary' : 'outline'}
 										onClick={() => handleStatusFilterChange('all')}
@@ -248,6 +268,7 @@ const CompetitionRequestsPage: React.FC = () => {
 										onClick={() => handleStatusFilterChange('pending')}
 										className="flex-1 md:flex-none"
 									>
+										<Clock className="h-4 w-4 mr-2" />
 										На рассмотрении
 									</Button>
 									<Button
@@ -255,6 +276,7 @@ const CompetitionRequestsPage: React.FC = () => {
 										onClick={() => handleStatusFilterChange('approved')}
 										className="flex-1 md:flex-none"
 									>
+										<CheckCircle className="h-4 w-4 mr-2" />
 										Одобренные
 									</Button>
 									<Button
@@ -262,6 +284,7 @@ const CompetitionRequestsPage: React.FC = () => {
 										onClick={() => handleStatusFilterChange('rejected')}
 										className="flex-1 md:flex-none"
 									>
+										<XCircle className="h-4 w-4 mr-2" />
 										Отклоненные
 									</Button>
 								</div>
@@ -294,85 +317,97 @@ const CompetitionRequestsPage: React.FC = () => {
 						{filteredApplications.map((application) => {
 							const competitionData = application.competitionData || {};
 							return (
-								<Card key={application.id} className="overflow-hidden border-none shadow-sm">
-									<CardContent className="p-6">
-										<div className="flex justify-between items-start mb-4">
+								<Card key={application.id} className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow duration-300">
+									<CardHeader className={`
+										py-4 px-6 border-b 
+										${application.status === 'pending' ? 'bg-amber-50 border-amber-100' :
+											application.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
+												'bg-rose-50 border-rose-100'}
+									`}>
+										<div className="flex justify-between items-center">
 											<h2 className="text-lg font-semibold text-neutral-800">
 												{competitionData.title || 'Название отсутствует'}
 											</h2>
 											{getStatusBadge(application.status as ApplicationStatus)}
 										</div>
+									</CardHeader>
 
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-											<div>
-												<p className="text-sm text-neutral-500 mb-1 flex items-center">
-													<User className="h-3.5 w-3.5 mr-1.5" />
-													Заявитель
-												</p>
-												<p className="text-neutral-700">
-													{application.User?.firstName} {application.User?.lastName}
-												</p>
-											</div>
-
-											<div>
-												<p className="text-sm text-neutral-500 mb-1 flex items-center">
-													<MapPin className="h-3.5 w-3.5 mr-1.5" />
-													Регион
-												</p>
-												<p className="text-neutral-700">{competitionData.region || 'Не указан'}</p>
-											</div>
-
-											<div>
-												<p className="text-sm text-neutral-500 mb-1 flex items-center">
-													<Calendar className="h-3.5 w-3.5 mr-1.5" />
-													Даты проведения
-												</p>
-												<p className="text-neutral-700">
-													{competitionData.startDate && competitionData.endDate
-														? `${new Date(competitionData.startDate).toLocaleDateString()} - ${new Date(
-															competitionData.endDate
-														).toLocaleDateString()}`
-														: 'Не указаны'}
-												</p>
-											</div>
-										</div>
-
+									<CardContent className="p-6">
 										<div className="mb-6">
-											<p className="text-sm text-neutral-500 mb-2">Описание</p>
-											<p className="text-neutral-700">
-												{competitionData.description || 'Описание отсутствует'}
-											</p>
-										</div>
-
-										<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-											<div>
-												<p className="text-sm text-neutral-500 mb-1">Формат</p>
-												<p className="text-neutral-700">
-													{competitionData.format ? getFormatName(competitionData.format) : 'Не указан'}
-												</p>
-											</div>
-
-											<div>
-												<p className="text-sm text-neutral-500 mb-1">Дисциплина</p>
-												<p className="text-neutral-700">
+											<div className="flex flex-wrap gap-4 mb-4">
+												<span className="inline-flex items-center px-3 py-1 text-sm rounded-full bg-primary-50 text-primary-700">
+													<Calendar className="h-3.5 w-3.5 mr-1.5" />
+													{competitionData.format ? getFormatName(competitionData.format) : 'Формат не указан'}
+												</span>
+												<span className="inline-flex items-center px-3 py-1 text-sm rounded-full bg-primary-50 text-primary-700">
+													<User className="h-3.5 w-3.5 mr-1.5" />
+													До {competitionData.maxParticipants || '∞'} участников
+												</span>
+												<span className="inline-flex items-center px-3 py-1 text-sm rounded-full bg-primary-50 text-primary-700">
 													{competitionData.discipline
 														? getDisciplineName(competitionData.discipline)
-														: 'Не указана'}
-												</p>
+														: 'Дисциплина не указана'}
+												</span>
 											</div>
 
-											<div>
-												<p className="text-sm text-neutral-500 mb-1">Максимум участников</p>
-												<p className="text-neutral-700">
-													{competitionData.maxParticipants || 'Не ограничено'}
+											<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 bg-gray-50 p-4 rounded-lg">
+												<div>
+													<p className="text-sm font-medium text-neutral-500 mb-1 flex items-center">
+														<User className="h-4 w-4 mr-1.5 text-primary-600" />
+														Заявитель
+													</p>
+													<p className="text-neutral-700 font-medium">
+														{application.User?.firstName} {application.User?.lastName || 'Имя не указано'}
+													</p>
+												</div>
+
+												<div>
+													<p className="text-sm font-medium text-neutral-500 mb-1 flex items-center">
+														<MapPin className="h-4 w-4 mr-1.5 text-primary-600" />
+														Регион
+													</p>
+													<p className="text-neutral-700 font-medium">{competitionData.region || 'Не указан'}</p>
+												</div>
+
+												<div>
+													<p className="text-sm font-medium text-neutral-500 mb-1 flex items-center">
+														<Calendar className="h-4 w-4 mr-1.5 text-primary-600" />
+														Даты проведения
+													</p>
+													<p className="text-neutral-700 font-medium">
+														{competitionData.startDate && competitionData.endDate
+															? `${new Date(competitionData.startDate).toLocaleDateString('ru-RU', {
+																day: 'numeric',
+																month: 'short',
+															})} - ${new Date(competitionData.endDate).toLocaleDateString('ru-RU', {
+																day: 'numeric',
+																month: 'short',
+																year: 'numeric',
+															})}`
+															: 'Не указаны'}
+													</p>
+												</div>
+											</div>
+
+											<div className="mb-6">
+												<p className="text-sm font-medium text-neutral-500 mb-2 flex items-center">
+													<Info className="h-4 w-4 mr-1.5 text-primary-600" />
+													Описание
 												</p>
+												<div className="bg-white p-4 rounded-lg border border-gray-100 text-neutral-700">
+													{competitionData.description ? (
+														<p>{competitionData.description}</p>
+													) : (
+														<p className="text-neutral-400 italic">Описание отсутствует</p>
+													)}
+												</div>
 											</div>
 										</div>
 
 										<div className="flex justify-between items-center pt-4 border-t border-neutral-100">
 											<div className="text-sm text-neutral-500 flex items-center">
-												<Clock className="h-3.5 w-3.5 mr-1.5" />
-												Создано: {formatDate(application.createdAt)}
+												<Clock className="h-4 w-4 mr-1.5" />
+												Заявка создана: {formatDate(application.createdAt)}
 											</div>
 
 											{application.status === 'pending' && (
@@ -388,10 +423,25 @@ const CompetitionRequestsPage: React.FC = () => {
 													<Button
 														onClick={() => handleStatusChange(application.id, 'approved')}
 														variant="primary"
+														className="shadow-sm hover:shadow-md transition-shadow"
 													>
 														<CheckCircle className="h-4 w-4 mr-2" />
 														Одобрить
 													</Button>
+												</div>
+											)}
+
+											{application.status === 'approved' && (
+												<div className="text-success-600 font-medium flex items-center">
+													<CheckCircle className="h-4 w-4 mr-2" />
+													Заявка одобрена
+												</div>
+											)}
+
+											{application.status === 'rejected' && (
+												<div className="text-error-600 font-medium flex items-center">
+													<XCircle className="h-4 w-4 mr-2" />
+													Заявка отклонена
 												</div>
 											)}
 										</div>

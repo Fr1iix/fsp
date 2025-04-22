@@ -252,7 +252,7 @@ const ProfilePage: React.FC = () => {
             {userInfo?.discription && (
               <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
                 <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4">
-                  <CardTitle className="text-lg font-semibold text-neutral-800">О себе</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-neutral-800 text-center">О себе</CardTitle>
                 </CardHeader>
 
                 <CardContent className="p-5">
