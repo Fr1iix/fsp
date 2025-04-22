@@ -178,7 +178,7 @@ const CompetitionListPage: React.FC = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+        <div className="text-center py-16 bg-white/95 rounded-lg shadow-xl">
           <p className="text-xl text-neutral-600 mb-4">
             Соревнования не найдены
           </p>
