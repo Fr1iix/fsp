@@ -6,6 +6,7 @@ import Footer from './components/Footer.tsx';
 import HomePage from './pages/HomePage.tsx';
 import LoginPage from './pages/LoginPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
+import ProfileEditPage from './pages/ProfileEditPage.tsx';
 import CompetitionListPage from './pages/CompetitionListPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import TeamsPage from './pages/TeamsPage.tsx';
@@ -71,6 +72,15 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/profile/edit"
+              element={
+                <ProtectedRoute>
+                  <ProfileEditPage />
                 </ProtectedRoute>
               }
             />

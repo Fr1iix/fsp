@@ -54,15 +54,21 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
     try {
       const response = await api.post('/registrations', registration);
 
-      // Обновляем список регистраций для соревнования
-      await get().fetchRegistrationsByCompetition(registration.competitionId);
-
-      // Если указан userId, обновляем также пользовательские регистрации
-      if (registration.userId) {
-        await get().fetchUserRegistrations(registration.userId);
-      }
-
-      set({ isLoading: false });
+      // Обновляем локальные данные, вместо дополнительных запросов
+      // Если нужно обновить данные, тут нужно просто обновить соответствующие массивы
+      set(state => {
+        const newRegistration = response.data;
+        return {
+          isLoading: false,
+          // Добавляем новую регистрацию в списки, если она относится к текущим спискам
+          registrations: registration.competitionId === state.registrations[0]?.competitionId
+            ? [...state.registrations, newRegistration]
+            : state.registrations,
+          userRegistrations: registration.userId
+            ? [...state.userRegistrations, newRegistration]
+            : state.userRegistrations,
+        };
+      });
 
       return response.data.id || null;
     } catch (error: any) {
@@ -77,23 +83,21 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   updateRegistrationStatus: async (id, status) => {
     set({ isLoading: true, error: null });
     try {
-      await api.patch(`/registrations/${id}/status`, { status });
+      const response = await api.patch(`/registrations/${id}/status`, { status });
+      const updatedRegistration = response.data;
 
-      // Находим регистрацию, чтобы узнать competitionId и userId
-      const registration = [...get().registrations, ...get().userRegistrations]
-        .find(reg => reg.id === id);
-
-      if (registration) {
-        // Обновляем список регистраций для соревнования
-        await get().fetchRegistrationsByCompetition(registration.competitionId);
-
-        // Если указан userId, обновляем также пользовательские регистрации
-        if (registration.userId) {
-          await get().fetchUserRegistrations(registration.userId);
-        }
-      }
-
-      set({ isLoading: false });
+      // Обновляем существующие данные без дополнительных запросов
+      set(state => ({
+        isLoading: false,
+        // Обновляем регистрацию в списке регистраций соревнования
+        registrations: state.registrations.map(reg =>
+          reg.id === id ? { ...reg, status } : reg
+        ),
+        // Обновляем регистрацию в списке пользовательских регистраций
+        userRegistrations: state.userRegistrations.map(reg =>
+          reg.id === id ? { ...reg, status } : reg
+        ),
+      }));
     } catch (error: any) {
       set({
         error: error?.response?.data?.message || 'Ошибка при обновлении статуса регистрации',
@@ -105,23 +109,20 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   withdrawRegistration: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      // Находим регистрацию, чтобы узнать competitionId и userId
-      const registration = [...get().registrations, ...get().userRegistrations]
-        .find(reg => reg.id === id);
-
       await api.patch(`/registrations/${id}/withdraw`);
 
-      if (registration) {
-        // Обновляем список регистраций для соревнования
-        await get().fetchRegistrationsByCompetition(registration.competitionId);
-
-        // Если указан userId, обновляем также пользовательские регистрации
-        if (registration.userId) {
-          await get().fetchUserRegistrations(registration.userId);
-        }
-      }
-
-      set({ isLoading: false });
+      // Обновляем локальные данные, вместо дополнительных запросов
+      set(state => ({
+        isLoading: false,
+        // Обновляем статус в списке регистраций соревнования
+        registrations: state.registrations.map(reg =>
+          reg.id === id ? { ...reg, status: 'withdrawn' as RegistrationStatus } : reg
+        ),
+        // Обновляем статус в списке пользовательских регистраций
+        userRegistrations: state.userRegistrations.map(reg =>
+          reg.id === id ? { ...reg, status: 'withdrawn' as RegistrationStatus } : reg
+        ),
+      }));
     } catch (error: any) {
       set({
         error: error?.response?.data?.message || 'Ошибка при отзыве регистрации',

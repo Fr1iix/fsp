@@ -18,10 +18,20 @@ $api.interceptors.request.use((config) => {
 	return config;
 });
 
+// Интерцептор для обработки ошибок
+$api.interceptors.response.use(
+	(response) => response,
+	(error) => {
+		console.error('API Error:', error.response?.data || error.message);
+		return Promise.reject(error);
+	}
+);
+
 // API для аутентификации
 export const authAPI = {
 	// Регистрация пользователя
 	register: async (email: string, password: string, role: UserRole) => {
+		console.log('Sending registration request', { email, role });
 		const { data } = await $api.post('/auth/register', { email, password, role });
 		return data;
 	},
@@ -35,6 +45,27 @@ export const authAPI = {
 	// Проверка токена
 	check: async () => {
 		const { data } = await $api.get('/auth/refresh');
+		return data;
+	},
+
+	// Проверка существования email
+	checkEmail: async (email: string) => {
+		const { data } = await $api.post('/user/check-email', { email });
+		return data.exists;
+	}
+};
+
+// API для работы с информацией о пользователе
+export const userAPI = {
+	// Получение данных пользователя
+	getUserInfo: async (userId: string) => {
+		const { data } = await $api.get(`/userInfo/getoneUserInfo/${userId}`);
+		return data;
+	},
+
+	// Обновление данных пользователя
+	updateUserInfo: async (userId: string, userInfo: any) => {
+		const { data } = await $api.put(`/userInfo/updateUserInfo/${userId}`, userInfo);
 		return data;
 	}
 };

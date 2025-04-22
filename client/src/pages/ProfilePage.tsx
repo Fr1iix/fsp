@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.ts';
 import { useRegistrationStore } from '../store/registrationStore.ts';
 import { CompetitionRegistration, Competition } from '../types';
-import { User, Award, Calendar, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { User, Award, Calendar, CheckCircle, XCircle, Clock, Mail, Phone, MapPin, Github, Edit3 } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
 import Badge from '../components/ui/Badge.tsx';
@@ -13,62 +13,75 @@ interface RegistrationWithCompetition extends CompetitionRegistration {
   competition: Competition;
 }
 
+// Обновим компонент для поддержки правильных типов для badge
+const ProfileBadge: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <span className="px-3 py-1 text-sm rounded-full bg-white text-neutral-800 shadow-sm flex items-center gap-1">
+      {children}
+    </span>
+  );
+};
+
 const ProfilePage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isLoading: isUserLoading } = useAuthStore();
+  const { user, userInfo, isLoading: isUserLoading, loadUserInfo } = useAuthStore();
   const { userRegistrations, fetchUserRegistrations, isLoading: isRegLoading } = useRegistrationStore();
 
   const [registrationsWithCompetitions, setRegistrationsWithCompetitions] = useState<RegistrationWithCompetition[]>([]);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      if (!user) return;
+  // Используем useCallback для функции загрузки данных, чтобы она не пересоздавалась при каждом рендере
+  const loadData = useCallback(async () => {
+    if (dataLoaded || !user) return;
 
-      setIsLoading(true);
+    setIsLoading(true);
+    try {
+      await loadUserInfo(user.id);
+      await fetchUserRegistrations(user.id);
+
+      if (userRegistrations.length > 0) {
+        const competitionIds = userRegistrations.map(reg => reg.competitionId);
+
+        try {
+          const response = await api.get('/competitions/multiple', {
+            params: { ids: competitionIds.join(',') }
+          });
+
+          const registrationsWithDetails = userRegistrations.map(reg => {
+            const competition = response.data.find((comp: Competition) => comp.id === reg.competitionId);
+            return { ...reg, competition };
+          }) as RegistrationWithCompetition[];
+
+          setRegistrationsWithCompetitions(registrationsWithDetails);
+        } catch (error) {
+          console.error('Error loading competitions data:', error);
+        }
+      }
 
       try {
-        // Загружаем регистрации пользователя
-        await fetchUserRegistrations(user.id);
-
-        // Получаем данные о соревнованиях для каждой регистрации
-        if (userRegistrations.length > 0) {
-          const competitionIds = userRegistrations.map(reg => reg.competitionId);
-
-          try {
-            const response = await api.get('/competitions/multiple', {
-              params: { ids: competitionIds.join(',') }
-            });
-
-            // Объединяем данные регистраций с данными соревнований
-            const registrationsWithDetails = userRegistrations.map(reg => {
-              const competition = response.data.find((comp: Competition) => comp.id === reg.competitionId);
-              return { ...reg, competition };
-            }) as RegistrationWithCompetition[];
-
-            setRegistrationsWithCompetitions(registrationsWithDetails);
-          } catch (error) {
-            console.error('Error loading competitions data:', error);
-          }
-        }
-
-        // Загружаем достижения пользователя
-        try {
-          const achievementsResponse = await api.get(`/achievements/user/${user.id}`);
-          setAchievements(achievementsResponse.data || []);
-        } catch (error) {
-          console.error('Error loading achievements:', error);
-        }
+        const achievementsResponse = await api.get(`/achievements/user/${user.id}`);
+        setAchievements(achievementsResponse.data || []);
       } catch (error) {
-        console.error('Error loading profile data:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading achievements:', error);
       }
-    };
 
-    loadUserData();
-  }, [user, fetchUserRegistrations, userRegistrations]);
+      // Отмечаем, что данные загружены, чтобы избежать повторной загрузки
+      setDataLoaded(true);
+    } catch (error) {
+      console.error('Ошибка при загрузке данных профиля:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, loadUserInfo, fetchUserRegistrations, userRegistrations, dataLoaded]);
+
+  // Загружаем данные только один раз при монтировании компонента или изменении пользователя
+  useEffect(() => {
+    if (user && !dataLoaded) {
+      loadData();
+    }
+  }, [user, dataLoaded, loadData]);
 
   // Получаем статус регистрации в виде бейджа
   const getStatusBadge = (status: string) => {
@@ -106,173 +119,206 @@ const ProfilePage: React.FC = () => {
     );
   }
 
+  // Функция для получения человекопонятного названия роли
+  const getRoleName = (role: string) => {
+    switch (role) {
+      case 'athlete': return 'Спортсмен';
+      case 'regional': return 'Региональный представитель';
+      case 'fsp': return 'Представитель ФСП';
+      default: return 'Пользователь';
+    }
+  };
+
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8 pt-24">
-      <div className="flex flex-col md:flex-row justify-between items-start mb-8">
-        <h1 className="text-3xl font-bold mb-4 md:mb-0">Личный кабинет</h1>
-        <Button
-          variant="outline"
-          onClick={() => navigate('/profile/edit')}
-          className="!bg-white keep-white-bg shadow-sm"
-        >
-          Редактировать профиль
-        </Button>
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <div className="container mx-auto max-w-5xl px-4 py-8 pt-24">
+        {/* Верхняя часть профиля */}
+        <div className="bg-gradient-to-r from-primary-600 to-primary-400 rounded-lg shadow-lg mb-6 p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+            <div className="w-28 h-28 rounded-full bg-white flex items-center justify-center shadow-lg">
+              <User className="h-16 w-16 text-primary-600" />
+            </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Профиль пользователя */}
-        <Card className="md:col-span-1 !bg-white shadow">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center">
-                <User className="h-12 w-12 text-primary-600" />
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                {userInfo?.firstName || 'Имя'} {userInfo?.lastName || 'Фамилия'}
+              </h1>
+              <p className="text-primary-100 mb-4">{getRoleName(user.role)}</p>
+
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                <ProfileBadge>
+                  <Mail className="h-4 w-4 mr-1" /> {user.email}
+                </ProfileBadge>
+
+                {userInfo?.phone && (
+                  <ProfileBadge>
+                    <Phone className="h-4 w-4 mr-1" /> {userInfo.phone}
+                  </ProfileBadge>
+                )}
               </div>
             </div>
-            <CardTitle className="text-center">
-              {user.firstName} {user.lastName}
-            </CardTitle>
-          </CardHeader>
 
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-neutral-500">Email</p>
-                <p>{user.email}</p>
-              </div>
-
-              <div>
-                <p className="text-sm text-neutral-500">Роль</p>
-                <p>{user.role === 'athlete' ? 'Спортсмен' :
-                  user.role === 'regional' ? 'Региональный представитель' : 'Представитель ФСП'}</p>
-              </div>
-
-              {user.region && (
-                <div>
-                  <p className="text-sm text-neutral-500">Регион</p>
-                  <p>{user.region}</p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm text-neutral-500">Дата регистрации</p>
-                <p>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</p>
-              </div>
+            <div>
+              <Button
+                variant="outline"
+                className="!bg-white shadow-md"
+                leftIcon={<Edit3 className="h-4 w-4" />}
+                onClick={() => navigate('/profile/edit')}
+              >
+                Редактировать
+              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Достижения и регистрации */}
-        <div className="md:col-span-2 space-y-6">
-          {/* Достижения */}
-          <Card className="!bg-white shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="h-5 w-5 mr-2 text-primary-600" />
-                Достижения
-              </CardTitle>
-            </CardHeader>
+        {/* Основная информация */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Левая колонка - детали пользователя */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Подробная информация */}
+            <Card className="overflow-hidden !bg-white shadow">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100">
+                <CardTitle className="text-lg">Личная информация</CardTitle>
+              </CardHeader>
 
-            <CardContent>
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
-                </div>
-              ) : achievements.length > 0 ? (
-                <div className="space-y-4">
-                  {achievements.map((achievement) => (
-                    <div
-                      key={achievement.id}
-                      className="p-3 bg-white border border-neutral-100 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{achievement.competitions.title}</h4>
-                          <p className="text-sm text-neutral-600">
-                            {achievement.place === 1 ? '🥇 Первое место' :
-                              achievement.place === 2 ? '🥈 Второе место' :
-                                achievement.place === 3 ? '🥉 Третье место' :
-                                  `${achievement.place} место`}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={achievement.isConfirmed ? 'success' : 'warning'}
-                          size="sm"
-                        >
-                          {achievement.isConfirmed ? 'Подтверждено' : 'Не подтверждено'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-neutral-500">
-                  У вас пока нет достижений. Участвуйте в соревнованиях!
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-neutral-100">
+                  {userInfo?.middleName && (
+                    <li className="p-4 flex items-center">
+                      <span className="text-neutral-500 w-1/3">Отчество:</span>
+                      <span className="font-medium">{userInfo.middleName}</span>
+                    </li>
+                  )}
 
-          {/* Регистрации на соревнования */}
-          <Card className="!bg-white shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="h-5 w-5 mr-2 text-primary-600" />
-                Мои регистрации
-              </CardTitle>
-            </CardHeader>
+                  <li className="p-4 flex items-center">
+                    <span className="text-neutral-500 w-1/3">Пол:</span>
+                    <span className="font-medium">{userInfo?.gender || 'Не указано'}</span>
+                  </li>
 
-            <CardContent>
-              {isLoading || isRegLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
-                </div>
-              ) : registrationsWithCompetitions.length > 0 ? (
-                <div className="space-y-4">
-                  {registrationsWithCompetitions.map((reg) => (
-                    <div
-                      key={reg.id}
-                      className="p-4 bg-white border border-neutral-100 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/competitions/${reg.competitionId}`)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="pt-1">
-                          {getStatusIcon(reg.status)}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-medium">{reg.competition?.title}</h4>
-                            {getStatusBadge(reg.status)}
-                          </div>
-                          <p className="text-sm text-neutral-600 mt-1">
-                            Дата соревнования: {reg.competition ? new Date(reg.competition.startDate).toLocaleDateString('ru-RU') : 'Н/Д'}
-                          </p>
-                          {reg.teamId && (
-                            <p className="text-sm text-neutral-600">
-                              Командная заявка
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-neutral-500">
-                  Вы еще не зарегистрировались ни на одно соревнование
-                </div>
-              )}
+                  {userInfo?.birthday && (
+                    <li className="p-4 flex items-center">
+                      <span className="text-neutral-500 w-1/3">Дата рождения:</span>
+                      <span className="font-medium">
+                        {new Date(userInfo.birthday).toLocaleDateString('ru-RU')}
+                      </span>
+                    </li>
+                  )}
 
-              <div className="mt-6">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={() => navigate('/competitions')}
-                >
-                  Найти соревнования
+                  {userInfo?.address && (
+                    <li className="p-4 flex items-center">
+                      <span className="text-neutral-500 w-1/3">Адрес:</span>
+                      <span className="font-medium flex items-center">
+                        <MapPin className="h-4 w-4 mr-1 text-neutral-400" />
+                        {userInfo.address}
+                      </span>
+                    </li>
+                  )}
+
+                  {userInfo?.github && (
+                    <li className="p-4 flex items-center">
+                      <span className="text-neutral-500 w-1/3">GitHub:</span>
+                      <a
+                        href={`https://github.com/${userInfo.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary-600 flex items-center hover:underline"
+                      >
+                        <Github className="h-4 w-4 mr-1" />
+                        {userInfo.github}
+                      </a>
+                    </li>
+                  )}
+
+                  <li className="p-4 flex items-center">
+                    <span className="text-neutral-500 w-1/3">Дата регистрации:</span>
+                    <span className="font-medium">
+                      {new Date(user.createdAt).toLocaleDateString('ru-RU')}
+                    </span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* О себе */}
+            {userInfo?.discription && (
+              <Card className="overflow-hidden !bg-white shadow">
+                <CardHeader className="bg-neutral-50 border-b border-neutral-100">
+                  <CardTitle className="text-lg">О себе</CardTitle>
+                </CardHeader>
+
+                <CardContent className="p-4">
+                  <p className="text-neutral-700 whitespace-pre-line">
+                    {userInfo.discription}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Правая колонка - достижения и активность */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Достижения */}
+            <Card className="overflow-hidden !bg-white shadow">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <Award className="h-5 w-5 mr-2 text-primary-600" />
+                  Достижения
+                </CardTitle>
+
+                <Button variant="outline" size="sm" onClick={() => navigate('/achievements')}>
+                  Все достижения
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardHeader>
+
+              <CardContent className="p-6">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-neutral-500">
+                    <Award className="h-14 w-14 mx-auto text-neutral-300 mb-3" />
+                    <p className="text-lg font-medium mb-1">У вас пока нет достижений</p>
+                    <p className="text-sm">Участвуйте в соревнованиях, чтобы получить их!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Предстоящие соревнования */}
+            <Card className="overflow-hidden !bg-white shadow">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg flex items-center">
+                  <Calendar className="h-5 w-5 mr-2 text-primary-600" />
+                  Мои соревнования
+                </CardTitle>
+
+                <Button variant="outline" size="sm" onClick={() => navigate('/competitions')}>
+                  Все соревнования
+                </Button>
+              </CardHeader>
+
+              <CardContent className="p-6">
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-neutral-500">
+                    <Calendar className="h-14 w-14 mx-auto text-neutral-300 mb-3" />
+                    <p className="text-lg font-medium mb-1">Вы не зарегистрированы на соревнования</p>
+                    <p className="text-sm">Найдите интересное соревнование и примите участие!</p>
+                    <Button
+                      className="mt-4"
+                      onClick={() => navigate('/competitions')}
+                    >
+                      Найти соревнования
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -42,24 +42,34 @@ const RegisterPage: React.FC = () => {
     try {
       setEmailCheckLoading(true);
       setRegistrationError(null);
+      setEmailExistsError(null);
 
       // Проверяем существование email перед регистрацией
-      const emailExists = await authAPI.checkEmailExists(data.email);
+      console.log('Checking if email exists:', data.email);
+      try {
+        const emailExists = await authAPI.checkEmail(data.email);
+        console.log('Email exists check result:', emailExists);
 
-      if (emailExists) {
-        setEmailExistsError('Пользователь с таким email уже зарегистрирован');
-        setEmailCheckLoading(false);
-        return;
+        if (emailExists) {
+          setEmailExistsError('Пользователь с таким email уже зарегистрирован');
+          setEmailCheckLoading(false);
+          return;
+        }
+      } catch (checkError) {
+        console.error('Error checking email:', checkError);
+        // Если произошла ошибка при проверке email, продолжаем регистрацию
+        // так как сервер может перепроверить это
       }
 
       setEmailExistsError(null);
       setEmailCheckLoading(false);
 
       // Если email не существует, регистрируем пользователя
+      console.log('Registering new user:', data.email);
       await registerUser(data.email, data.password, 'athlete');
+      console.log('Registration successful, navigating to profile');
 
       // useEffect выше перенаправит пользователя, когда user будет установлен
-
     } catch (error: any) {
       setEmailCheckLoading(false);
       console.error('Registration error:', error);
