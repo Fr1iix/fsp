@@ -42,11 +42,7 @@ const Team = sequelize.define('team', {
 
 const Competition = sequelize.define('competition', {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-<<<<<<< HEAD
     disciplineId: {type: DataTypes.INTEGER, foreignKey: true}, 
-=======
-    disciplineId: {type: DataTypes.INTEGER, foreignKey: true},
->>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
     name: {type: DataTypes.STRING, unique: true},
     discription: {type: DataTypes.STRING},
     format: {type: DataTypes.STRING},
@@ -54,17 +50,10 @@ const Competition = sequelize.define('competition', {
     startdate: {type: DataTypes.DATE, defaultValue: Date.now()},
     enddate: {type: DataTypes.DATE,},
     startdate_cometition: {type: DataTypes.DATE,},
-<<<<<<< HEAD
     enddate_cometition: {type: DataTypes.DATE,},   
     maxParticipants: {type: DataTypes.INTEGER,},
     status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
     AddressId: {type: DataTypes.INTEGER, foreignKey: true},   
-=======
-    enddate_cometition: {type: DataTypes.DATE,},
-    maxParticipants: {type: DataTypes.INTEGER,},
-    status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
-    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
->>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
     regionId: {type: DataTypes.INTEGER, foreignKey: true},
 })
 
@@ -76,11 +65,7 @@ const CompetitionAdmins = sequelize.define('competitionadmins', {
 const Teammembers = sequelize.define('teammembers', {
     is_capitan: {type: DataTypes.BOOLEAN , defaultValue:false},
     UserId: {type: DataTypes.INTEGER, foreignKey: true},
-<<<<<<< HEAD
     TeamId: {type: DataTypes.INTEGER, foreignKey: true},    
-=======
-    TeamId: {type: DataTypes.INTEGER, foreignKey: true},
->>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
 })
 
 const Adress = sequelize.define('address', {
@@ -106,11 +91,6 @@ const Discipline = sequelize.define("discipline", {
     progres: {type: DataTypes.INTEGER,}
 })
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 2404a621006752789368a852acbe5fb6e8d5e1e9
 const Regions = sequelize.define("regions", {
     id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     name: {type: DataTypes.STRING, unique: true},
