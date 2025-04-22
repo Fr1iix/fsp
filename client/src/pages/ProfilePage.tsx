@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.ts';
 import { useRegistrationStore } from '../store/registrationStore.ts';
 import { CompetitionRegistration, Competition } from '../types';
-import { User, Award, Calendar, CheckCircle, XCircle, Clock, Mail, Phone, MapPin, Github, Edit3 } from 'lucide-react';
+import { User, Award, Calendar, CheckCircle, XCircle, Clock, Mail, Phone, MapPin, Github, Edit3, PlusCircle, ClipboardList } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
 import Badge from '../components/ui/Badge.tsx';
@@ -177,7 +177,7 @@ const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
+              <div className="flex flex-col gap-2">
                 <Button
                   variant="outline"
                   className="!bg-white/95 shadow-md hover:!bg-white transition-all"
@@ -186,6 +186,28 @@ const ProfilePage: React.FC = () => {
                 >
                   Редактировать
                 </Button>
+
+                {user.role === 'regional' && (
+                  <Button
+                    variant="primary"
+                    className="!bg-success-500 shadow-md hover:!bg-success-600 transition-all text-white"
+                    leftIcon={<PlusCircle className="h-4 w-4" />}
+                    onClick={() => navigate('/competition/request')}
+                  >
+                    Создать заявку на соревнование
+                  </Button>
+                )}
+
+                {user.role === 'fsp' && (
+                  <Button
+                    variant="primary"
+                    className="!bg-accent-500 shadow-md hover:!bg-accent-600 transition-all text-white"
+                    leftIcon={<ClipboardList className="h-4 w-4" />}
+                    onClick={() => navigate('/competition/requests')}
+                  >
+                    Посмотреть заявки
+                  </Button>
+                )}
               </div>
             </div>
           </div>
