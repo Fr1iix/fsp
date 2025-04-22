@@ -1,117 +1,117 @@
 const sequelize = require('../../db')
-const {DataTypes} = require('sequelize')
+const { DataTypes } = require('sequelize')
 
 const User = sequelize.define('user', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    email: {type: DataTypes.STRING, unique: true},
-    password: {type: DataTypes.STRING},
-    role: {type: DataTypes.STRING, defaultValue: 'user'},
-    idRegions: {type: DataTypes.INTEGER, foreignKey: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    email: { type: DataTypes.STRING, unique: true },
+    password: { type: DataTypes.STRING },
+    role: { type: DataTypes.STRING, defaultValue: 'user' },
+    idRegions: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const UserInfo = sequelize.define('user_info', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    firstName: {type: DataTypes.STRING, allowNull: false,},
-    middleName: {type: DataTypes.STRING, allowNull: false,},
-    lastName: {type: DataTypes.STRING, allowNull: false,},
-    birthday: {type: DataTypes.DATE, allowNull: false,},
-    phone: {type: DataTypes.STRING},
-    gender: {type: DataTypes.STRING, allowNull: false,},
-    github: {type: DataTypes.STRING},
-    discription: {type: DataTypes.STRING},
-    AddressId: {type: DataTypes.INTEGER, foreignKey: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    firstName: { type: DataTypes.STRING, allowNull: true },
+    middleName: { type: DataTypes.STRING, allowNull: true },
+    lastName: { type: DataTypes.STRING, allowNull: true },
+    birthday: { type: DataTypes.DATE, allowNull: true },
+    phone: { type: DataTypes.STRING, allowNull: true },
+    gender: { type: DataTypes.STRING, allowNull: true, defaultValue: 'не указан' },
+    github: { type: DataTypes.STRING, allowNull: true },
+    discription: { type: DataTypes.STRING, allowNull: true },
+    AddressId: { type: DataTypes.INTEGER, foreignKey: true, allowNull: true },
 })
 
 const Results = sequelize.define('results', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    AmountOfCompetitions: {type: DataTypes.INTEGER},
-    middlerating: {type: DataTypes.INTEGER},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    AmountOfCompetitions: { type: DataTypes.INTEGER },
+    middlerating: { type: DataTypes.INTEGER },
 })
 
 const Team = sequelize.define('team', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
-    name: {type: DataTypes.STRING, unique: true},
-    discription: {type: DataTypes.STRING, defaultValue: " "},
-    points: {type: DataTypes.INTEGER},
-    result: {type: DataTypes.INTEGER},
-    teammembersId: {type: DataTypes.INTEGER, foreignKey: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    name: { type: DataTypes.STRING, unique: true },
+    discription: { type: DataTypes.STRING, defaultValue: " " },
+    points: { type: DataTypes.INTEGER },
+    result: { type: DataTypes.INTEGER },
+    teammembersId: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const Competition = sequelize.define('competition', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    disciplineId: {type: DataTypes.INTEGER, foreignKey: true}, 
-    name: {type: DataTypes.STRING, unique: true},
-    discription: {type: DataTypes.STRING},
-    format: {type: DataTypes.STRING},
-    type: {type: DataTypes.STRING, defaultValue: 'Открытые'},
-    startdate: {type: DataTypes.DATE, defaultValue: Date.now()},
-    enddate: {type: DataTypes.DATE,},
-    startdate_cometition: {type: DataTypes.DATE,},
-    enddate_cometition: {type: DataTypes.DATE,},   
-    maxParticipants: {type: DataTypes.INTEGER,},
-    status: {type: DataTypes.STRING, defaultValue: 'Регистрация открыта'},
-    AddressId: {type: DataTypes.INTEGER, foreignKey: true},   
-    regionId: {type: DataTypes.INTEGER, foreignKey: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    disciplineId: { type: DataTypes.INTEGER, foreignKey: true },
+    name: { type: DataTypes.STRING, unique: true },
+    discription: { type: DataTypes.STRING },
+    format: { type: DataTypes.STRING },
+    type: { type: DataTypes.STRING, defaultValue: 'Открытые' },
+    startdate: { type: DataTypes.DATE, defaultValue: Date.now() },
+    enddate: { type: DataTypes.DATE, },
+    startdate_cometition: { type: DataTypes.DATE, },
+    enddate_cometition: { type: DataTypes.DATE, },
+    maxParticipants: { type: DataTypes.INTEGER, },
+    status: { type: DataTypes.STRING, defaultValue: 'Регистрация открыта' },
+    AddressId: { type: DataTypes.INTEGER, foreignKey: true },
+    regionId: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const CompetitionAdmins = sequelize.define('competitionadmins', {
-    CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
+    CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const Teammembers = sequelize.define('teammembers', {
-    is_capitan: {type: DataTypes.BOOLEAN , defaultValue:false},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    TeamId: {type: DataTypes.INTEGER, foreignKey: true},    
+    is_capitan: { type: DataTypes.BOOLEAN, defaultValue: false },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    TeamId: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const Adress = sequelize.define('address', {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    regionId: {type: DataTypes.INTEGER, foreignKey: true},
-    town: {type: DataTypes.STRING},
-    street: {type: DataTypes.STRING},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    regionId: { type: DataTypes.INTEGER, foreignKey: true },
+    town: { type: DataTypes.STRING },
+    street: { type: DataTypes.STRING },
 })
 
 const Projects = sequelize.define("projects", {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    name: {type: DataTypes.STRING, unique: true},
-    files: {type: DataTypes.STRING, unique: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    name: { type: DataTypes.STRING, unique: true },
+    files: { type: DataTypes.STRING, unique: true },
 })
 
 const Discipline = sequelize.define("discipline", {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    name: {type: DataTypes.STRING, unique: true},
-    discription: {type: DataTypes.STRING},
-    competitionsCount :  {type: DataTypes.INTEGER, defaultValue: 0},
-    participantsCount: {type: DataTypes.INTEGER, defaultValue: 0},
-    progres: {type: DataTypes.INTEGER,}
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING, unique: true },
+    discription: { type: DataTypes.STRING },
+    competitionsCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+    participantsCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+    progres: { type: DataTypes.INTEGER, }
 })
 
 const Regions = sequelize.define("regions", {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    name: {type: DataTypes.STRING, unique: true},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name: { type: DataTypes.STRING, unique: true },
 })
 
 const CompetitionRegion = sequelize.define("competitionRegion", {
-    competitionId: {type: DataTypes.INTEGER, foreignKey: true},
-    regionId: {type: DataTypes.INTEGER, foreignKey: true},
+    competitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    regionId: { type: DataTypes.INTEGER, foreignKey: true },
 })
 
 const Application = sequelize.define("application", {
-    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
-    UserId: {type: DataTypes.INTEGER, foreignKey: true},
-    TeamId: {type: DataTypes.INTEGER, foreignKey: true},
-    CompetitionId: {type: DataTypes.INTEGER, foreignKey: true},
-    status: {type: DataTypes.STRING,},
-    UUID: {type: DataTypes.STRING},
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    TeamId: { type: DataTypes.INTEGER, foreignKey: true },
+    CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    status: { type: DataTypes.STRING, },
+    UUID: { type: DataTypes.STRING },
 })
 
 User.hasOne(UserInfo, {
-    foreignKey: 'userId',
+    foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
 UserInfo.belongsTo(User)

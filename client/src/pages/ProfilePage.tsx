@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore.ts';
 import { useRegistrationStore } from '../store/registrationStore.ts';
 import { CompetitionRegistration, Competition } from '../types';
-import { User, Award, Calendar, CheckCircle, XCircle, Clock, Mail, Phone, MapPin, Github, Edit3, PlusCircle, ClipboardList } from 'lucide-react';
+import { User, Award, Calendar, CheckCircle, XCircle, Clock, Mail, Phone, Github, Edit3, PlusCircle, ClipboardList } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
 import Badge from '../components/ui/Badge.tsx';
@@ -197,7 +197,7 @@ const ProfilePage: React.FC = () => {
               </CardHeader>
 
               <CardContent className="p-0">
-                {(userInfo?.phone || userInfo?.gender || userInfo?.address || userInfo?.github) ? (
+                {(userInfo?.phone || userInfo?.gender || userInfo?.github) ? (
                   <ul className="divide-y divide-neutral-100">
                     {userInfo?.phone && (
                       <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
@@ -213,16 +213,6 @@ const ProfilePage: React.FC = () => {
                       <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
                         <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">Пол:</span>
                         <span className="text-neutral-800">{userInfo.gender}</span>
-                      </li>
-                    )}
-
-                    {userInfo?.address && (
-                      <li className="p-4 flex flex-col sm:flex-row sm:items-center group transition-colors hover:bg-neutral-50">
-                        <span className="text-neutral-500 w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">Адрес:</span>
-                        <span className="flex items-center text-neutral-800">
-                          <MapPin className="h-4 w-4 mr-2 text-primary-500 flex-shrink-0" />
-                          <span className="break-words">{userInfo.address}</span>
-                        </span>
                       </li>
                     )}
 

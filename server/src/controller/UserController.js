@@ -40,7 +40,7 @@ class UserController {
             // Создаем связанные данные пользователя с пустыми значениями
             try {
                 const userInfo = await UserInfo.create({
-                    userId: user.id,
+                    UserId: user.id,
                     firstName: '',
                     lastName: '',
                     middleName: '',
@@ -51,6 +51,7 @@ class UserController {
                 console.log('UserInfo created successfully:', userInfo.id);
             } catch (infoError) {
                 console.error('Ошибка при создании информации о пользователе:', infoError);
+                console.error('Детали ошибки:', infoError.message);
                 // Если не удалось создать UserInfo, все равно продолжаем
                 // Можно позже создать эту запись
             }
