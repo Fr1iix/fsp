@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Code } from 'lucide-react';
+import { Menu, X, Code, User, LogOut } from 'lucide-react';
 import Button from './ui/Button.tsx';
+import { useAuthStore } from '../store/authStore.ts';
 
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout } = useAuthStore();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    logout();
+    navigate('/');
   };
 
   return (
@@ -59,28 +66,44 @@ const Header: React.FC = () => {
               </a>
             </div>
 
-            {/* Поиск */}
-            <button className="flex items-center justify-center w-8 h-8 text-neutral-900 hover:text-neutral-700 transition-colors">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            {/* Кнопки авторизации */}
+            {/* Кнопки авторизации или профиля */}
             <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/login')}
-              >
-                Войти
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => navigate('/register')}
-              >
-                Регистрация
-              </Button>
+              {user ? (
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<User className="h-4 w-4" />}
+                    onClick={() => navigate('/profile')}
+                  >
+                    Профиль
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<LogOut className="h-4 w-4" />}
+                    onClick={handleLogout}
+                  >
+                    Выйти
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/login')}
+                  >
+                    Войти
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate('/register')}
+                  >
+                    Регистрация
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -109,19 +132,42 @@ const Header: React.FC = () => {
             </Link>
 
             <div className="pt-4 space-y-2">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => navigate('/login')}
-              >
-                Войти
-              </Button>
-              <Button
-                className="w-full"
-                onClick={() => navigate('/register')}
-              >
-                Регистрация
-              </Button>
+              {user ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full flex items-center justify-center"
+                    leftIcon={<User className="h-4 w-4 mr-2" />}
+                    onClick={() => navigate('/profile')}
+                  >
+                    Профиль
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="w-full flex items-center justify-center"
+                    leftIcon={<LogOut className="h-4 w-4 mr-2" />}
+                    onClick={handleLogout}
+                  >
+                    Выйти
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate('/login')}
+                  >
+                    Войти
+                  </Button>
+                  <Button
+                    className="w-full"
+                    onClick={() => navigate('/register')}
+                  >
+                    Регистрация
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

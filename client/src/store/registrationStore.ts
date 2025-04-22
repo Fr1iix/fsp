@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { CompetitionRegistration, RegistrationStatus } from '../types';
-import { supabase } from '../lib/supabase.ts';
+import api from '../utils/api';
 
 interface RegistrationState {
   registrations: CompetitionRegistration[];
@@ -26,18 +26,12 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   fetchRegistrationsByCompetition: async (competitionId) => {
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('competitionId', competitionId);
-
-      if (error) throw error;
-
-      set({ registrations: data as CompetitionRegistration[], isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при загрузке регистраций', 
-        isLoading: false 
+      const response = await api.get(`/registrations/competition/${competitionId}`);
+      set({ registrations: response.data, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при загрузке регистраций',
+        isLoading: false
       });
     }
   },
@@ -45,18 +39,12 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   fetchUserRegistrations: async (userId) => {
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('registrations')
-        .select('*')
-        .eq('userId', userId);
-
-      if (error) throw error;
-
-      set({ userRegistrations: data as CompetitionRegistration[], isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при загрузке регистраций пользователя', 
-        isLoading: false 
+      const response = await api.get(`/registrations/user/${userId}`);
+      set({ userRegistrations: response.data, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при загрузке регистраций пользователя',
+        isLoading: false
       });
     }
   },
@@ -64,33 +52,23 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   createRegistration: async (registration) => {
     set({ isLoading: true, error: null });
     try {
-      const now = new Date().toISOString();
-      const { data, error } = await supabase
-        .from('registrations')
-        .insert({
-          ...registration,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .select();
+      const response = await api.post('/registrations', registration);
 
-      if (error) throw error;
-      
       // Обновляем список регистраций для соревнования
       await get().fetchRegistrationsByCompetition(registration.competitionId);
-      
+
       // Если указан userId, обновляем также пользовательские регистрации
       if (registration.userId) {
         await get().fetchUserRegistrations(registration.userId);
       }
-      
+
       set({ isLoading: false });
-      
-      return data[0]?.id || null;
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при создании регистрации', 
-        isLoading: false 
+
+      return response.data.id || null;
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при создании регистрации',
+        isLoading: false
       });
       return null;
     }
@@ -99,35 +77,27 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
   updateRegistrationStatus: async (id, status) => {
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('registrations')
-        .update({
-          status,
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+      await api.patch(`/registrations/${id}/status`, { status });
 
       // Находим регистрацию, чтобы узнать competitionId и userId
       const registration = [...get().registrations, ...get().userRegistrations]
         .find(reg => reg.id === id);
-      
+
       if (registration) {
         // Обновляем список регистраций для соревнования
         await get().fetchRegistrationsByCompetition(registration.competitionId);
-        
+
         // Если указан userId, обновляем также пользовательские регистрации
         if (registration.userId) {
           await get().fetchUserRegistrations(registration.userId);
         }
       }
-      
+
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при обновлении статуса регистрации', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при обновлении статуса регистрации',
+        isLoading: false
       });
     }
   },
@@ -138,32 +108,24 @@ export const useRegistrationStore = create<RegistrationStore>((set, get) => ({
       // Находим регистрацию, чтобы узнать competitionId и userId
       const registration = [...get().registrations, ...get().userRegistrations]
         .find(reg => reg.id === id);
-      
-      const { error } = await supabase
-        .from('registrations')
-        .update({
-          status: 'withdrawn',
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', id);
 
-      if (error) throw error;
+      await api.patch(`/registrations/${id}/withdraw`);
 
       if (registration) {
         // Обновляем список регистраций для соревнования
         await get().fetchRegistrationsByCompetition(registration.competitionId);
-        
+
         // Если указан userId, обновляем также пользовательские регистрации
         if (registration.userId) {
           await get().fetchUserRegistrations(registration.userId);
         }
       }
-      
+
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при отзыве регистрации', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при отзыве регистрации',
+        isLoading: false
       });
     }
   },

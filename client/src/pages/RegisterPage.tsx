@@ -1,36 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore';
-import { Mail, Lock, ChevronDown } from 'lucide-react';
+import { Mail, Lock, AlertCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Card, CardContent, CardFooter } from '../components/ui/Card';
-import { User } from '../types';
+import { authAPI } from '../utils/api';
 
 interface RegisterFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: User['role'];
 }
-
-const ROLE_LABELS = {
-  fsp: 'Федерация спортивного программирования',
-  regional: 'Региональный представитель',
-  athlete: 'Спортсмен'
-};
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register: registerUser, isLoading, error } = useAuthStore();
+  const { register: registerUser, isLoading, error, user } = useAuthStore();
+  const [emailCheckLoading, setEmailCheckLoading] = useState(false);
+  const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
+  const [registrationError, setRegistrationError] = useState<string | null>(null);
+
+  // Если пользователь авторизован, перенаправляем на страницу профиля
+  useEffect(() => {
+    if (user) {
+      navigate('/profile');
+    }
+  }, [user, navigate]);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterFormData>({
     defaultValues: {
       email: '',
       password: '',
       confirmPassword: '',
-      role: 'athlete'
     },
   });
 
@@ -38,10 +40,33 @@ const RegisterPage: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await registerUser(data.email, data.password, data.role, {});
-      navigate('/');
-    } catch (error) {
+      setEmailCheckLoading(true);
+      setRegistrationError(null);
+
+      // Проверяем существование email перед регистрацией
+      const emailExists = await authAPI.checkEmailExists(data.email);
+
+      if (emailExists) {
+        setEmailExistsError('Пользователь с таким email уже зарегистрирован');
+        setEmailCheckLoading(false);
+        return;
+      }
+
+      setEmailExistsError(null);
+      setEmailCheckLoading(false);
+
+      // Если email не существует, регистрируем пользователя
+      await registerUser(data.email, data.password, 'athlete');
+
+      // useEffect выше перенаправит пользователя, когда user будет установлен
+
+    } catch (error: any) {
+      setEmailCheckLoading(false);
       console.error('Registration error:', error);
+      setRegistrationError(
+        error?.response?.data?.message ||
+        'Ошибка при регистрации. Пожалуйста, попробуйте позже.'
+      );
     }
   };
 
@@ -57,9 +82,12 @@ const RegisterPage: React.FC = () => {
 
         <Card className="!bg-white !bg-opacity-100 !backdrop-blur-none shadow-md">
           <CardContent className="pt-6">
-            {error && (
-              <div className="mb-6 p-3 bg-error-50 border border-error-200 text-error-700 rounded-md">
-                {error}
+            {(error || emailExistsError || registrationError) && (
+              <div className="mb-6 p-3 bg-error-50 border border-error-200 text-error-700 rounded-md flex items-start">
+                <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                <div>
+                  {emailExistsError || registrationError || error}
+                </div>
               </div>
             )}
 
@@ -110,37 +138,10 @@ const RegisterPage: React.FC = () => {
                 })}
               />
 
-              {/* Выбор роли (выпадающий список) */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-700">
-                  Выберите роль
-                </label>
-                <div className="relative">
-                  <select
-                    {...register('role', { required: 'Выберите роль' })}
-                    className="appearance-none block w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm 
-                             focus:outline-none focus:ring-primary-500 focus:border-primary-500
-                             text-base placeholder-neutral-400"
-                  >
-                    {Object.entries(ROLE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
-                    <ChevronDown className="h-4 w-4" />
-                  </div>
-                </div>
-                {errors.role && (
-                  <p className="text-sm text-error-600 mt-1">{errors.role.message}</p>
-                )}
-              </div>
-
               <Button
                 type="submit"
                 fullWidth
-                isLoading={isLoading}
+                isLoading={isLoading || emailCheckLoading}
               >
                 Зарегистрироваться
               </Button>

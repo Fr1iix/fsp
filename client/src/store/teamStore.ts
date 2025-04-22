@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Team, TeamStatus } from '../types';
-import { supabase } from '../lib/supabase.ts';
+import api from '../utils/api';
 
 interface TeamState {
   teams: Team[];
@@ -28,18 +28,12 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   fetchTeamsByCompetition: async (competitionId) => {
     set({ isLoading: true, error: null });
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('competitionId', competitionId);
-
-      if (error) throw error;
-
-      set({ teams: data as Team[], isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при загрузке команд', 
-        isLoading: false 
+      const response = await api.get(`/teams/competition/${competitionId}`);
+      set({ teams: response.data, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при загрузке команд',
+        isLoading: false
       });
     }
   },
@@ -47,19 +41,12 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   getTeamById: async (id) => {
     set({ isLoading: true, error: null, currentTeam: null });
     try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
-
-      set({ currentTeam: data as Team, isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при загрузке команды', 
-        isLoading: false 
+      const response = await api.get(`/teams/${id}`);
+      set({ currentTeam: response.data, isLoading: false });
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при загрузке команды',
+        isLoading: false
       });
     }
   },
@@ -67,27 +54,17 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   createTeam: async (team) => {
     set({ isLoading: true, error: null });
     try {
-      const now = new Date().toISOString();
-      const { data, error } = await supabase
-        .from('teams')
-        .insert({
-          ...team,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .select();
+      const response = await api.post('/teams', team);
 
-      if (error) throw error;
-      
       // Обновляем список команд
       await get().fetchTeamsByCompetition(team.competitionId);
       set({ isLoading: false });
-      
-      return data[0]?.id || null;
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при создании команды', 
-        isLoading: false 
+
+      return response.data.id || null;
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при создании команды',
+        isLoading: false
       });
       return null;
     }
@@ -96,31 +73,24 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   updateTeam: async (id, updates) => {
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          ...updates,
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', id);
-
-      if (error) throw error;
+      await api.put(`/teams/${id}`, updates);
 
       // Обновляем текущую команду если она открыта
       if (get().currentTeam?.id === id) {
         await get().getTeamById(id);
       }
-      
+
       // Обновляем список команд для соответствующего соревнования
-      if (get().currentTeam?.competitionId) {
-        await get().fetchTeamsByCompetition(get().currentTeam.competitionId);
+      const currentTeam = get().currentTeam;
+      if (currentTeam && currentTeam.competitionId) {
+        await get().fetchTeamsByCompetition(currentTeam.competitionId);
       }
-      
+
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при обновлении команды', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при обновлении команды',
+        isLoading: false
       });
     }
   },
@@ -128,42 +98,19 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   joinTeam: async (teamId, userId, userDetails) => {
     set({ isLoading: true, error: null });
     try {
-      // Получаем текущую команду
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', teamId)
-        .single();
-
-      if (teamError) throw teamError;
-
-      const team = teamData as Team;
-      const newMember = {
+      await api.post(`/teams/${teamId}/members`, {
         userId,
         firstName: userDetails.firstName,
-        lastName: userDetails.lastName,
-        isCapitain: false,
-        joinedAt: new Date().toISOString(),
-      };
-
-      // Добавляем нового участника
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          members: [...team.members, newMember],
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', teamId);
-
-      if (error) throw error;
+        lastName: userDetails.lastName
+      });
 
       // Обновляем данные команды
       await get().getTeamById(teamId);
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при присоединении к команде', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при присоединении к команде',
+        isLoading: false
       });
     }
   },
@@ -171,37 +118,15 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   leaveTeam: async (teamId, userId) => {
     set({ isLoading: true, error: null });
     try {
-      // Получаем текущую команду
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('id', teamId)
-        .single();
-
-      if (teamError) throw teamError;
-
-      const team = teamData as Team;
-      
-      // Удаляем участника из списка
-      const updatedMembers = team.members.filter(member => member.userId !== userId);
-      
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          members: updatedMembers,
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', teamId);
-
-      if (error) throw error;
+      await api.delete(`/teams/${teamId}/members/${userId}`);
 
       // Обновляем данные команды
       await get().getTeamById(teamId);
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при выходе из команды', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при выходе из команды',
+        isLoading: false
       });
     }
   },
@@ -209,24 +134,16 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   updateTeamStatus: async (teamId, status) => {
     set({ isLoading: true, error: null });
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({
-          status,
-          updatedAt: new Date().toISOString(),
-        })
-        .eq('id', teamId);
-
-      if (error) throw error;
+      await api.patch(`/teams/${teamId}/status`, { status });
 
       // Обновляем данные команды
       await get().getTeamById(teamId);
       set({ isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Ошибка при обновлении статуса команды', 
-        isLoading: false 
+    } catch (error: any) {
+      set({
+        error: error?.response?.data?.message || 'Ошибка при обновлении статуса команды',
+        isLoading: false
       });
     }
-  },
+  }
 }));

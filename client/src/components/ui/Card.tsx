@@ -26,13 +26,15 @@ const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'card',
+        'card bg-white',
         paddingClasses[padding],
+        'shadow-sm border border-neutral-100 rounded-lg',
         hoverable && 'cursor-pointer transform transition-transform duration-200 hover:scale-[1.02]',
         'animate-fade-in',
-        className || 'bg-white/80 backdrop-blur-sm'
+        className
       )}
       onClick={onClick}
+      style={{ backgroundColor: 'white' }}
     >
       {children}
     </div>
