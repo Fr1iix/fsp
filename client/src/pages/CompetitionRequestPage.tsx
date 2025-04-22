@@ -4,7 +4,8 @@ import { ArrowLeft, Calendar, MapPin, Info, User, Users } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.tsx';
 import { useAuthStore } from '../store/authStore.ts';
-import api from '../utils/api';
+import { applicationAPI } from '../utils/api';
+import { v4 as uuidv4 } from 'uuid';
 
 const CompetitionRequestPage: React.FC = () => {
 	const navigate = useNavigate();
@@ -46,15 +47,32 @@ const CompetitionRequestPage: React.FC = () => {
 		setSubmitError(null);
 
 		try {
-			// В будущем здесь будет отправка запроса на сервер
-			// Сейчас просто имитируем успешную отправку
-			await new Promise(resolve => setTimeout(resolve, 1000)); // Имитация запроса
+			// Создаем данные о соревновании
+			const competitionData = {
+				title: formData.title,
+				description: formData.description,
+				format: formData.format,
+				discipline: formData.discipline,
+				region: formData.region,
+				startDate: formData.startDate,
+				endDate: formData.endDate,
+				maxParticipants: formData.maxParticipants,
+			};
 
-			// Здесь будет реальная отправка запроса на бэкенд
-			// await api.post('/competitions/request', {
-			//   ...formData,
-			//   requesterId: user.id,
-			// });
+			console.log('Данные соревнования для заявки:', competitionData);
+
+			// Создаем данные для заявки с JSON-строкой данных о соревновании в UUID
+			const applicationData = {
+				UserId: user.id,
+				status: 'pending',
+				UUID: JSON.stringify(competitionData)
+			};
+
+			console.log('Отправляемые данные заявки:', applicationData);
+
+			// Отправляем заявку через API
+			const response = await applicationAPI.create(applicationData);
+			console.log('Ответ сервера:', response);
 
 			setSubmitSuccess(true);
 		} catch (error: any) {
@@ -256,6 +274,7 @@ const CompetitionRequestPage: React.FC = () => {
 											required
 											value={formData.startDate}
 											onChange={handleChange}
+											min={new Date().toISOString().split('T')[0]}
 											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
 										/>
 									</div>
@@ -271,6 +290,7 @@ const CompetitionRequestPage: React.FC = () => {
 											required
 											value={formData.endDate}
 											onChange={handleChange}
+											min={formData.startDate || new Date().toISOString().split('T')[0]}
 											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
 										/>
 									</div>
@@ -278,29 +298,30 @@ const CompetitionRequestPage: React.FC = () => {
 
 								<div>
 									<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="maxParticipants">
-										Максимальное количество участников
+										Максимальное число участников *
 									</label>
 									<input
 										type="number"
 										id="maxParticipants"
 										name="maxParticipants"
-										value={formData.maxParticipants}
-										onChange={handleChange}
+										required
 										min={1}
 										max={1000}
+										value={formData.maxParticipants}
+										onChange={handleChange}
 										className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
 									/>
 								</div>
 
-								<div className="pt-4 flex justify-end">
+								<div className="pt-4">
 									<Button
 										type="submit"
 										disabled={isSubmitting}
-										className="px-6 shadow-sm hover:shadow transition-all"
+										className="w-full flex items-center justify-center"
 									>
 										{isSubmitting ? (
 											<>
-												<span className="mr-2 inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+												<span className="mr-2 animate-spin">◌</span>
 												Отправка...
 											</>
 										) : (

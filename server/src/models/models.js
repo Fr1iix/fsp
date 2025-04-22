@@ -215,5 +215,16 @@ Application.belongsTo(Team)
 module.exports = {
     sequelize,
     User,
-    UserInfo
+    UserInfo,
+    Results,
+    Team,
+    Competition,
+    CompetitionAdmins,
+    Teammembers,
+    Adress,
+    Projects,
+    Discipline,
+    Regions,
+    CompetitionRegion,
+    Application
 }

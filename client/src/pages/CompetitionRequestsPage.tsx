@@ -6,87 +6,18 @@ import Button from '../components/ui/Button.tsx';
 import Badge from '../components/ui/Badge.tsx';
 import Input from '../components/ui/Input.tsx';
 import { useAuthStore } from '../store/authStore.ts';
-import api from '../utils/api';
-
-// Тип для заявок на соревнования
-interface CompetitionRequest {
-	id: string;
-	title: string;
-	description: string;
-	format: 'open' | 'regional' | 'federal';
-	discipline: 'product' | 'security' | 'algorithm' | 'robotics' | 'drones';
-	region: string;
-	startDate: string;
-	endDate: string;
-	maxParticipants: number;
-	requesterId: string;
-	requesterName: string;
-	requesterRegion: string;
-	status: 'pending' | 'approved' | 'rejected';
-	createdAt: string;
-}
+import { applicationAPI, competitionAPI } from '../utils/api';
+import { Application, CompetitionRequest, ApplicationStatus } from '../types';
 
 const CompetitionRequestsPage: React.FC = () => {
 	const navigate = useNavigate();
 	const { user } = useAuthStore();
-	const [requests, setRequests] = useState<CompetitionRequest[]>([]);
-	const [filteredRequests, setFilteredRequests] = useState<CompetitionRequest[]>([]);
+	const [applications, setApplications] = useState<Application[]>([]);
+	const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [searchTerm, setSearchTerm] = useState('');
 	const [statusFilter, setStatusFilter] = useState<string>('all');
-
-	// Временные моковые данные (в реальном приложении будут загружены с сервера)
-	const mockRequests: CompetitionRequest[] = [
-		{
-			id: '1',
-			title: 'Региональные соревнования по программированию',
-			description: 'Соревнования для школьников и студентов по алгоритмическому программированию.',
-			format: 'regional',
-			discipline: 'algorithm',
-			region: 'Москва',
-			startDate: '2023-12-10',
-			endDate: '2023-12-12',
-			maxParticipants: 100,
-			requesterId: 'user1',
-			requesterName: 'Иванов Иван',
-			requesterRegion: 'Москва',
-			status: 'pending',
-			createdAt: '2023-11-15T10:30:00Z',
-		},
-		{
-			id: '2',
-			title: 'Открытый чемпионат по кибербезопасности',
-			description: 'Соревнования для специалистов по информационной безопасности.',
-			format: 'open',
-			discipline: 'security',
-			region: 'Санкт-Петербург',
-			startDate: '2023-11-25',
-			endDate: '2023-11-27',
-			maxParticipants: 50,
-			requesterId: 'user2',
-			requesterName: 'Петров Петр',
-			requesterRegion: 'Санкт-Петербург',
-			status: 'approved',
-			createdAt: '2023-10-20T14:15:00Z',
-		},
-		{
-			id: '3',
-			title: 'Федеральный хакатон по разработке продуктов',
-			description: 'Командные соревнования по разработке программных продуктов.',
-			format: 'federal',
-			discipline: 'product',
-			region: 'Казань',
-			startDate: '2024-01-15',
-			endDate: '2024-01-17',
-			maxParticipants: 200,
-			requesterId: 'user3',
-			requesterName: 'Сидоров Сидор',
-			requesterRegion: 'Казань',
-			status: 'rejected',
-			createdAt: '2023-11-05T09:45:00Z',
-		},
-	];
 
 	useEffect(() => {
 		// Проверяем, является ли пользователь представителем ФСП
@@ -95,17 +26,39 @@ const CompetitionRequestsPage: React.FC = () => {
 			return;
 		}
 
-		const fetchRequests = async () => {
+		const fetchApplications = async () => {
 			setIsLoading(true);
 			try {
-				// В реальном приложении данные будут загружены с сервера
-				// const response = await api.get('/competitions/requests');
-				// setRequests(response.data);
+				const fetchedApplications = await applicationAPI.getAll();
 
-				// Используем моковые данные для демонстрации
-				await new Promise(resolve => setTimeout(resolve, 800)); // Имитация задержки загрузки
-				setRequests(mockRequests);
-				setFilteredRequests(mockRequests);
+				// Преобразуем данные заявок для отображения
+				const processedApplications = fetchedApplications.map((app: Application) => {
+					// Если у заявки есть UUID с данными о соревновании, распарсим их
+					let competitionData = {};
+					if (app.UUID) {
+						try {
+							// Пробуем парсить всё целиком
+							if (app.UUID.includes('competitionData')) {
+								const jsonData = JSON.parse(app.UUID);
+								competitionData = jsonData.competitionData ? JSON.parse(jsonData.competitionData) : {};
+							} else {
+								// Если нет поля competitionData, пробуем парсить UUID как JSON
+								competitionData = JSON.parse(app.UUID);
+							}
+						} catch (err) {
+							console.error('Ошибка при парсинге данных соревнования:', err, app.UUID);
+						}
+					}
+
+					return {
+						...app,
+						competitionData
+					};
+				});
+
+				console.log('Загруженные заявки:', processedApplications);
+				setApplications(processedApplications);
+				setFilteredApplications(processedApplications);
 			} catch (err: any) {
 				console.error('Ошибка при загрузке заявок:', err);
 				setError(err.response?.data?.message || 'Не удалось загрузить заявки на соревнования');
@@ -114,25 +67,38 @@ const CompetitionRequestsPage: React.FC = () => {
 			}
 		};
 
-		fetchRequests();
+		fetchApplications();
 	}, [user, navigate]);
 
 	// Обработка изменения статуса заявки
-	const handleStatusChange = async (requestId: string, newStatus: 'approved' | 'rejected') => {
+	const handleStatusChange = async (applicationId: string, newStatus: ApplicationStatus) => {
 		try {
-			// В реальном приложении будет отправлен запрос на сервер
-			// await api.patch(`/competitions/requests/${requestId}`, { status: newStatus });
+			// Отправляем запрос на изменение статуса
+			await applicationAPI.updateStatus(applicationId, newStatus);
+
+			// Если статус изменен на "approved", нужно создать соревнование
+			if (newStatus === 'approved') {
+				const application = applications.find(app => app.id === applicationId);
+				if (application && application.competitionData) {
+					// Создаем соревнование на основе данных заявки
+					await competitionAPI.create({
+						...application.competitionData,
+						createdBy: application.UserId,
+						status: 'registration'
+					});
+				}
+			}
 
 			// Обновляем состояние на фронтенде
-			setRequests(prev =>
-				prev.map(req =>
-					req.id === requestId ? { ...req, status: newStatus } : req
+			setApplications(prev =>
+				prev.map(app =>
+					app.id === applicationId ? { ...app, status: newStatus } : app
 				)
 			);
 
 			// Применяем текущие фильтры к обновленным данным
-			filterRequests(searchTerm, statusFilter, requests.map(req =>
-				req.id === requestId ? { ...req, status: newStatus } : req
+			filterApplications(searchTerm, statusFilter, applications.map(app =>
+				app.id === applicationId ? { ...app, status: newStatus } : app
 			));
 
 		} catch (err: any) {
@@ -142,39 +108,44 @@ const CompetitionRequestsPage: React.FC = () => {
 	};
 
 	// Фильтрация заявок
-	const filterRequests = (search: string, status: string, data: CompetitionRequest[] = requests) => {
+	const filterApplications = (search: string, status: string, data: Application[] = applications) => {
 		let filtered = [...data];
 
 		// Фильтрация по поисковому запросу
 		if (search) {
 			const searchLower = search.toLowerCase();
-			filtered = filtered.filter(req =>
-				req.title.toLowerCase().includes(searchLower) ||
-				req.requesterName.toLowerCase().includes(searchLower) ||
-				req.region.toLowerCase().includes(searchLower)
-			);
+			filtered = filtered.filter(app => {
+				// Ищем в разных полях заявки и связанных данных
+				const competitionTitle = app.competitionData?.title || '';
+				const userName = app.User?.firstName + ' ' + app.User?.lastName || '';
+				const region = app.competitionData?.region || '';
+
+				return competitionTitle.toLowerCase().includes(searchLower) ||
+					userName.toLowerCase().includes(searchLower) ||
+					region.toLowerCase().includes(searchLower);
+			});
 		}
 
 		// Фильтрация по статусу
 		if (status !== 'all') {
-			filtered = filtered.filter(req => req.status === status);
+			filtered = filtered.filter(app => app.status === status);
 		}
 
-		setFilteredRequests(filtered);
+		setFilteredApplications(filtered);
 	};
 
 	const handleSearch = (e: React.FormEvent) => {
 		e.preventDefault();
-		filterRequests(searchTerm, statusFilter);
+		filterApplications(searchTerm, statusFilter);
 	};
 
 	const handleStatusFilterChange = (status: string) => {
 		setStatusFilter(status);
-		filterRequests(searchTerm, status);
+		filterApplications(searchTerm, status);
 	};
 
 	// Получение бейджа для статуса заявки
-	const getStatusBadge = (status: string) => {
+	const getStatusBadge = (status: ApplicationStatus) => {
 		switch (status) {
 			case 'pending':
 				return <Badge variant="warning">На рассмотрении</Badge>;
@@ -248,162 +219,186 @@ const CompetitionRequestsPage: React.FC = () => {
 				<h1 className="text-2xl font-bold text-neutral-800 mb-6">Заявки на соревнования</h1>
 
 				<div className="mb-8">
-					<div className="bg-primary-50 border border-primary-100 rounded-xl p-6">
-						<h3 className="text-primary-800 font-semibold mb-3 flex items-center">
-							<Info className="h-5 w-5 mr-2 text-primary-600" />
-							Важная информация
-						</h3>
-						<p className="text-sm text-primary-700 mb-4">
-							На этой странице вы можете просматривать и управлять заявками на соревнования от региональных представителей.
-							После одобрения заявки соревнование будет автоматически создано и доступно на платформе.
-						</p>
-					</div>
-				</div>
+					<Card className="overflow-hidden border-none shadow-sm">
+						<CardContent className="p-6">
+							<div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+								<form onSubmit={handleSearch} className="flex-1 w-full md:w-auto">
+									<div className="relative">
+										<Input
+											type="text"
+											placeholder="Поиск по названию, автору или региону..."
+											value={searchTerm}
+											onChange={(e) => setSearchTerm(e.target.value)}
+											className="pl-10 pr-4 py-2 w-full"
+										/>
+										<Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+									</div>
+								</form>
 
-				<div className="flex flex-col md:flex-row justify-between gap-4 mb-6">
-					<form onSubmit={handleSearch} className="flex-1">
-						<Input
-							leftIcon={<Search className="h-4 w-4" />}
-							placeholder="Поиск по названию, представителю или региону..."
-							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
-							className="w-full"
-							fullWidth
-						/>
-					</form>
-
-					<div className="flex flex-wrap gap-2">
-						<Button
-							variant={statusFilter === 'all' ? 'primary' : 'outline'}
-							size="sm"
-							onClick={() => handleStatusFilterChange('all')}
-						>
-							Все заявки
-						</Button>
-						<Button
-							variant={statusFilter === 'pending' ? 'primary' : 'outline'}
-							size="sm"
-							onClick={() => handleStatusFilterChange('pending')}
-						>
-							На рассмотрении
-						</Button>
-						<Button
-							variant={statusFilter === 'approved' ? 'primary' : 'outline'}
-							size="sm"
-							onClick={() => handleStatusFilterChange('approved')}
-						>
-							Одобрено
-						</Button>
-						<Button
-							variant={statusFilter === 'rejected' ? 'primary' : 'outline'}
-							size="sm"
-							onClick={() => handleStatusFilterChange('rejected')}
-						>
-							Отклонено
-						</Button>
-					</div>
+								<div className="flex gap-2 w-full md:w-auto">
+									<Button
+										variant={statusFilter === 'all' ? 'primary' : 'outline'}
+										onClick={() => handleStatusFilterChange('all')}
+										className="flex-1 md:flex-none"
+									>
+										Все
+									</Button>
+									<Button
+										variant={statusFilter === 'pending' ? 'primary' : 'outline'}
+										onClick={() => handleStatusFilterChange('pending')}
+										className="flex-1 md:flex-none"
+									>
+										На рассмотрении
+									</Button>
+									<Button
+										variant={statusFilter === 'approved' ? 'primary' : 'outline'}
+										onClick={() => handleStatusFilterChange('approved')}
+										className="flex-1 md:flex-none"
+									>
+										Одобренные
+									</Button>
+									<Button
+										variant={statusFilter === 'rejected' ? 'primary' : 'outline'}
+										onClick={() => handleStatusFilterChange('rejected')}
+										className="flex-1 md:flex-none"
+									>
+										Отклоненные
+									</Button>
+								</div>
+							</div>
+						</CardContent>
+					</Card>
 				</div>
 
 				{error && (
-					<div className="bg-error-50 text-error-700 p-4 rounded-md mb-6">
+					<div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg text-error-700">
+						<p className="font-medium">Ошибка:</p>
 						<p>{error}</p>
 					</div>
 				)}
 
-				{filteredRequests.length > 0 ? (
-					<div className="space-y-6">
-						{filteredRequests.map((request) => (
-							<Card key={request.id} className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
-								<CardContent className="p-0">
-									<div className="p-5 border-b border-neutral-100">
-										<div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3">
-											<h3 className="text-lg font-semibold text-neutral-800">{request.title}</h3>
-											{getStatusBadge(request.status)}
-										</div>
-
-										<div className="flex flex-wrap gap-x-6 gap-y-2 mb-4 text-sm text-neutral-600">
-											<div className="flex items-center">
-												<User className="h-4 w-4 mr-2 text-primary-500" />
-												{request.requesterName}
-											</div>
-											<div className="flex items-center">
-												<MapPin className="h-4 w-4 mr-2 text-primary-500" />
-												{request.region}
-											</div>
-											<div className="flex items-center">
-												<Calendar className="h-4 w-4 mr-2 text-primary-500" />
-												{formatDate(request.startDate)} - {formatDate(request.endDate)}
-											</div>
-											<div className="flex items-center">
-												<Clock className="h-4 w-4 mr-2 text-primary-500" />
-												Заявка создана: {formatDate(request.createdAt)}
-											</div>
-										</div>
-
-										<div className="flex flex-wrap gap-2 mb-4">
-											<span className="inline-block px-3 py-1 text-xs rounded-full bg-primary-50 text-primary-700">
-												{getFormatName(request.format)}
-											</span>
-											<span className="inline-block px-3 py-1 text-xs rounded-full bg-primary-50 text-primary-700">
-												{getDisciplineName(request.discipline)}
-											</span>
-											<span className="inline-block px-3 py-1 text-xs rounded-full bg-primary-50 text-primary-700">
-												До {request.maxParticipants} участников
-											</span>
-										</div>
-
-										<p className="text-neutral-700 mb-4">
-											{request.description}
-										</p>
-
-										{request.status === 'pending' && (
-											<div className="flex gap-3 mt-4">
-												<Button
-													variant="primary"
-													leftIcon={<CheckCircle className="h-4 w-4" />}
-													onClick={() => handleStatusChange(request.id, 'approved')}
-												>
-													Одобрить
-												</Button>
-												<Button
-													variant="outline"
-													leftIcon={<XCircle className="h-4 w-4" />}
-													onClick={() => handleStatusChange(request.id, 'rejected')}
-												>
-													Отклонить
-												</Button>
-											</div>
-										)}
-									</div>
-								</CardContent>
-							</Card>
-						))}
+				{filteredApplications.length === 0 ? (
+					<div className="text-center py-16">
+						<div className="text-neutral-400 mb-4">
+							<Info className="h-12 w-12 mx-auto" />
+						</div>
+						<h2 className="text-xl font-medium text-neutral-600 mb-2">Заявки не найдены</h2>
+						<p className="text-neutral-500">
+							{statusFilter !== 'all'
+								? 'Попробуйте изменить фильтр по статусу или поисковый запрос'
+								: 'В данный момент нет заявок на рассмотрение'}
+						</p>
 					</div>
 				) : (
-					<div className="text-center py-16 bg-white rounded-lg shadow-sm">
-						<div className="bg-neutral-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
-							<Calendar className="h-12 w-12 text-neutral-300" />
-						</div>
-						<p className="text-xl text-neutral-600 mb-4">
-							Заявки не найдены
-						</p>
-						<p className="text-neutral-500 mb-6">
-							{searchTerm || statusFilter !== 'all' ?
-								'Попробуйте изменить параметры поиска или фильтрации' :
-								'В данный момент нет заявок на создание соревнований'}
-						</p>
-						{(searchTerm || statusFilter !== 'all') && (
-							<Button
-								variant="outline"
-								onClick={() => {
-									setSearchTerm('');
-									setStatusFilter('all');
-									setFilteredRequests(requests);
-								}}
-							>
-								Сбросить все фильтры
-							</Button>
-						)}
+					<div className="space-y-6">
+						{filteredApplications.map((application) => {
+							const competitionData = application.competitionData || {};
+							return (
+								<Card key={application.id} className="overflow-hidden border-none shadow-sm">
+									<CardContent className="p-6">
+										<div className="flex justify-between items-start mb-4">
+											<h2 className="text-lg font-semibold text-neutral-800">
+												{competitionData.title || 'Название отсутствует'}
+											</h2>
+											{getStatusBadge(application.status as ApplicationStatus)}
+										</div>
+
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+											<div>
+												<p className="text-sm text-neutral-500 mb-1 flex items-center">
+													<User className="h-3.5 w-3.5 mr-1.5" />
+													Заявитель
+												</p>
+												<p className="text-neutral-700">
+													{application.User?.firstName} {application.User?.lastName}
+												</p>
+											</div>
+
+											<div>
+												<p className="text-sm text-neutral-500 mb-1 flex items-center">
+													<MapPin className="h-3.5 w-3.5 mr-1.5" />
+													Регион
+												</p>
+												<p className="text-neutral-700">{competitionData.region || 'Не указан'}</p>
+											</div>
+
+											<div>
+												<p className="text-sm text-neutral-500 mb-1 flex items-center">
+													<Calendar className="h-3.5 w-3.5 mr-1.5" />
+													Даты проведения
+												</p>
+												<p className="text-neutral-700">
+													{competitionData.startDate && competitionData.endDate
+														? `${new Date(competitionData.startDate).toLocaleDateString()} - ${new Date(
+															competitionData.endDate
+														).toLocaleDateString()}`
+														: 'Не указаны'}
+												</p>
+											</div>
+										</div>
+
+										<div className="mb-6">
+											<p className="text-sm text-neutral-500 mb-2">Описание</p>
+											<p className="text-neutral-700">
+												{competitionData.description || 'Описание отсутствует'}
+											</p>
+										</div>
+
+										<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+											<div>
+												<p className="text-sm text-neutral-500 mb-1">Формат</p>
+												<p className="text-neutral-700">
+													{competitionData.format ? getFormatName(competitionData.format) : 'Не указан'}
+												</p>
+											</div>
+
+											<div>
+												<p className="text-sm text-neutral-500 mb-1">Дисциплина</p>
+												<p className="text-neutral-700">
+													{competitionData.discipline
+														? getDisciplineName(competitionData.discipline)
+														: 'Не указана'}
+												</p>
+											</div>
+
+											<div>
+												<p className="text-sm text-neutral-500 mb-1">Максимум участников</p>
+												<p className="text-neutral-700">
+													{competitionData.maxParticipants || 'Не ограничено'}
+												</p>
+											</div>
+										</div>
+
+										<div className="flex justify-between items-center pt-4 border-t border-neutral-100">
+											<div className="text-sm text-neutral-500 flex items-center">
+												<Clock className="h-3.5 w-3.5 mr-1.5" />
+												Создано: {formatDate(application.createdAt)}
+											</div>
+
+											{application.status === 'pending' && (
+												<div className="flex gap-3">
+													<Button
+														onClick={() => handleStatusChange(application.id, 'rejected')}
+														variant="outline"
+														className="border-error-300 text-error-600 hover:bg-error-50"
+													>
+														<XCircle className="h-4 w-4 mr-2" />
+														Отклонить
+													</Button>
+													<Button
+														onClick={() => handleStatusChange(application.id, 'approved')}
+														variant="primary"
+													>
+														<CheckCircle className="h-4 w-4 mr-2" />
+														Одобрить
+													</Button>
+												</div>
+											)}
+										</div>
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 				)}
 			</div>
@@ -411,4 +406,4 @@ const CompetitionRequestsPage: React.FC = () => {
 	);
 };
 
-export default CompetitionRequestsPage; 
+export default CompetitionRequestsPage;

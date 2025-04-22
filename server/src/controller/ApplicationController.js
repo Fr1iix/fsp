@@ -1,80 +1,170 @@
 const ApiError = require("../errorr/ApiError")
 const { Op } = require('sequelize');
-const {Application} = require("../models/models")
+const { Application, User, Team, Competition } = require("../models/models")
 
-class ApplicationController{
-    getAll = (req, res, next) => {
-        try{
+class ApplicationController {
+    async getAll(req, res, next) {
+        try {
             let limit = parseInt(req.query.limit, 10) || 10;
             let offset = parseInt(req.query.offset, 10) || 0;
             const search = req.query.search || '';
+            const status = req.query.status || null;
 
-            const whereClause = search
-                ? {
-                name: {
-                    [Op.iLike]: `%${search}%`, // для Postgres; используйте [Op.substring] для других СУБД
-                },
+            const whereClause = {};
+
+            if (search) {
+                whereClause.UUID = {
+                    [Op.iLike]: `%${search}%`
+                };
             }
-            : {};
 
-            const app = Adress.findAll({
+            if (status) {
+                whereClause.status = status;
+            }
+
+            const applications = await Application.findAll({
                 where: whereClause,
-                limit, offset
-            })
+                limit,
+                offset,
+                include: [
+                    { model: User },
+                    { model: Team },
+                    { model: Competition }
+                ]
+            });
 
-            return res.status(200).json(app)
-        }catch (error){
-            next(ApiError.badRequest(e.message))
-        }        
+            return res.status(200).json(applications);
+        } catch (error) {
+            next(ApiError.badRequest(error.message));
+        }
     }
 
-    async getOne(req, res){
-        const id = req.params.id
-        const app = await Adress.findByPk(id)
-        return res.status(200).json(app)
+    async getByUser(req, res, next) {
+        try {
+            const UserId = req.params.userId;
+
+            const applications = await Application.findAll({
+                where: { UserId },
+                include: [
+                    { model: User },
+                    { model: Team },
+                    { model: Competition }
+                ]
+            });
+
+            return res.status(200).json(applications);
+        } catch (error) {
+            next(ApiError.badRequest(error.message));
+        }
+    }
+
+    async getOne(req, res, next) {
+        try {
+            const id = req.params.id;
+            const application = await Application.findByPk(id, {
+                include: [
+                    { model: User },
+                    { model: Team },
+                    { model: Competition }
+                ]
+            });
+
+            if (!application) {
+                return res.status(404).json({ message: 'Заявка не найдена' });
+            }
+
+            return res.status(200).json(application);
+        } catch (error) {
+            next(ApiError.badRequest(error.message));
+        }
     }
 
     async create(req, res, next) {
         try {
-            let {UserId, TeamId, CompetitionId, status, UUID} = req.body
-            const app = await Adress.create({UserId, TeamId, CompetitionId, status, UUID});
-            return res.status(200).json(app)
-        } catch (e) {
-            next(ApiError.badRequest(e.message))
+            const { UserId, TeamId, CompetitionId, status = 'pending', UUID } = req.body;
+
+            console.log('Получены данные для создания заявки:', req.body);
+
+            if (!UserId) {
+                return res.status(400).json({ message: 'Отсутствует обязательное поле UserId' });
+            }
+
+            const application = await Application.create({
+                UserId,
+                TeamId,
+                CompetitionId,
+                status,
+                UUID
+            });
+
+            console.log('Заявка успешно создана:', application.id);
+
+            return res.status(201).json(application);
+        } catch (error) {
+            console.error('Ошибка при создании заявки:', error);
+            next(ApiError.badRequest(error.message));
         }
     }
 
-    async deleteAdress(req,res){
-        const id = req.params.id
-        await Address.destroy({where: {id}})
-    }
-
-    async updateOne(req, res) {
-        const {id} = req.params;
-        const {
-            UserId, TeamId, CompetitionId, status, UUID
-        } = req.body;
-
-
+    async delete(req, res, next) {
         try {
-            const app = await Adress.findOne({where: {id}});
+            const id = req.params.id;
+            const result = await Application.destroy({ where: { id } });
 
-            if (!app) {
-                return res.status(404).json({error: 'User was not found'});
+            if (result === 0) {
+                return res.status(404).json({ message: 'Заявка не найдена' });
             }
 
-            app.UserId = UserId;
-            app.TeamId = TeamId;
-            app.CompetitionId = CompetitionId;
-            app.status = status;
-            app.UUID = UUID;
-            
-            await app.save();
-
-            return res.status(200).json(app);
+            return res.status(200).json({ message: 'Заявка успешно удалена' });
         } catch (error) {
-            console.error(error);
-            return res.status(500).json({error: 'Internal server error'});
+            next(ApiError.badRequest(error.message));
+        }
+    }
+
+    async updateStatus(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+
+            if (!['pending', 'approved', 'rejected'].includes(status)) {
+                return res.status(400).json({ message: 'Неверный статус заявки' });
+            }
+
+            const application = await Application.findByPk(id);
+            if (!application) {
+                return res.status(404).json({ message: 'Заявка не найдена' });
+            }
+
+            application.status = status;
+            await application.save();
+
+            return res.status(200).json(application);
+        } catch (error) {
+            next(ApiError.badRequest(error.message));
+        }
+    }
+
+    async updateOne(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { UserId, TeamId, CompetitionId, status, UUID } = req.body;
+
+            const application = await Application.findByPk(id);
+            if (!application) {
+                return res.status(404).json({ message: 'Заявка не найдена' });
+            }
+
+            if (UserId) application.UserId = UserId;
+            if (TeamId) application.TeamId = TeamId;
+            if (CompetitionId) application.CompetitionId = CompetitionId;
+            if (status) application.status = status;
+            if (UUID) application.UUID = UUID;
+
+            await application.save();
+
+            return res.status(200).json(application);
+        } catch (error) {
+            next(ApiError.badRequest(error.message));
         }
     }
 }
