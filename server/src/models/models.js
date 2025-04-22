@@ -10,6 +10,7 @@ const User = sequelize.define('user', {
 })
 
 const UserInfo = sequelize.define('user_info', {
+    id: {type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true},
     UserId: {type: DataTypes.INTEGER, foreignKey: true},
     firstName: {type: DataTypes.STRING, allowNull: false,},
     middleName: {type: DataTypes.STRING, allowNull: false,},
