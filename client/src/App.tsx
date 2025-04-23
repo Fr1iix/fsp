@@ -13,6 +13,7 @@ import TeamsPage from './pages/TeamsPage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
 import CompetitionRequestPage from './pages/CompetitionRequestPage.tsx';
 import CompetitionRequestsPage from './pages/CompetitionRequestsPage.tsx';
+import AnalyticsPage from './pages/AnalyticsPage.tsx';
 
 // Вспомогательный компонент для защищенных роутов
 interface ProtectedRouteProps {
@@ -101,6 +102,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['fsp']}>
                   <CompetitionRequestsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute allowedRoles={['fsp', 'regional']}>
+                  <AnalyticsPage />
                 </ProtectedRoute>
               }
             />

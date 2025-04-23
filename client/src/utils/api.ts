@@ -163,4 +163,56 @@ export const teamsAPI = {
 	}
 };
 
+// API для работы с аналитикой
+export const analyticsAPI = {
+	// Получение аналитики по соревнованиям
+	getCompetitionsAnalytics: async (params?: { 
+		disciplineId?: string; 
+		regionId?: string; 
+		startDate?: string; 
+		endDate?: string; 
+		status?: string 
+	}) => {
+		const { data } = await $api.get('/analytics/competitions', { params });
+		return data;
+	},
+
+	// Получение аналитики по спортсменам
+	getAthletesAnalytics: async (params?: { 
+		disciplineId?: string; 
+		regionId?: string 
+	}) => {
+		const { data } = await $api.get('/analytics/athletes', { params });
+		return data;
+	},
+
+	// Экспорт данных в Excel
+	exportData: async (params?: { 
+		type: 'competitions' | 'athletes';
+		disciplineId?: string; 
+		regionId?: string; 
+		startDate?: string; 
+		endDate?: string; 
+		status?: string 
+	}) => {
+		const { data } = await $api.get('/analytics/export', { 
+			params,
+			responseType: 'blob'
+		});
+		return data;
+	},
+
+	// Получение списка дисциплин
+	getDisciplines: async () => {
+		const { data } = await $api.get('/disciplines');
+		return data;
+	},
+
+	// Получение списка регионов
+	getRegions: async () => {
+		const { data } = await $api.get('/regions');
+		return data;
+	}
+};
+
 export default $api; 

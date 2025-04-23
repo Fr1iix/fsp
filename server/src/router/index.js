@@ -14,10 +14,12 @@ const CompetitionRegionRouter = require('./CompetitionRegionRouter')
 const DisciplineRouter = require('./DisciplineRouter')
 const ProjectsRouter = require('./ProjectsRouter')
 const RegionsRouter = require('./RegionsRouter')
+const analyticsRouter = require('./analyticsRouter')
 
 router.use('/auth', authRouter)
 router.use('/user', userRouter)
 router.use('/userInfo', userInfoRouter)
+router.use('/analytics', analyticsRouter)
 
 router.use('/results', ResultRouter)
 router.use('/teams', TeamRouter)

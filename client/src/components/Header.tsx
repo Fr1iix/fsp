@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Code, User, LogOut } from 'lucide-react';
+import { Menu, X, Code, User, LogOut, BarChart2 } from 'lucide-react';
 import Button from './ui/Button.tsx';
 import { useAuthStore } from '../store/authStore.ts';
 
@@ -18,6 +18,9 @@ const Header: React.FC = () => {
     logout();
     navigate('/');
   };
+
+  // Проверка, имеет ли пользователь роль FSP или regional
+  const hasAnalyticsAccess = user && (user.role === 'fsp' || user.role === 'regional');
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-50 border-b border-neutral-100">
@@ -49,6 +52,11 @@ const Header: React.FC = () => {
             <Link to="/about" className="text-sm text-neutral-700 hover:text-primary-600">
               О нас
             </Link>
+            {hasAnalyticsAccess && (
+              <Link to="/analytics" className="text-sm text-neutral-700 hover:text-primary-600">
+                Аналитика
+              </Link>
+            )}
           </nav>
 
           {/* Правая часть - Desktop */}
@@ -73,6 +81,16 @@ const Header: React.FC = () => {
             <div className="flex items-center space-x-2">
               {user ? (
                 <div className="flex items-center space-x-2">
+                  {hasAnalyticsAccess && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<BarChart2 className="h-4 w-4" />}
+                      onClick={() => navigate('/analytics')}
+                    >
+                      Аналитика
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -133,10 +151,25 @@ const Header: React.FC = () => {
             <Link to="/about" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               О нас
             </Link>
+            {hasAnalyticsAccess && (
+              <Link to="/analytics" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
+                Аналитика
+              </Link>
+            )}
 
             <div className="pt-4 space-y-2">
               {user ? (
                 <>
+                  {hasAnalyticsAccess && (
+                    <Button
+                      variant="outline"
+                      className="w-full flex items-center justify-center"
+                      leftIcon={<BarChart2 className="h-4 w-4 mr-2" />}
+                      onClick={() => navigate('/analytics')}
+                    >
+                      Аналитика
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     className="w-full flex items-center justify-center"
