@@ -107,8 +107,19 @@ export const competitionAPI = {
 
 	// Получение конкретного соревнования
 	getOne: async (id: string) => {
-		const { data } = await $api.get(`/competitions/${id}`);
-		return data;
+		try {
+			console.log(`Выполняем запрос к API для получения соревнования с ID: ${id}`);
+			const response = await $api.get(`/Competition/${id}`);
+			console.log('Получен ответ от API соревнования:', response.data);
+			return response.data;
+		} catch (error: any) {
+			console.error('Ошибка при получении соревнования:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
 	},
 
 	// Создание соревнования
@@ -203,9 +214,70 @@ export const teamsAPI = {
 	},
 
 	// Создание команды
-	create: async (team: any) => {
-		const { data } = await $api.post('/teams', team);
-		return data;
+	create: async (teamData: {
+		name: string;
+		discription?: string;
+		CompetitionId: string;
+	}) => {
+		console.log('Отправка запроса на создание команды:', teamData);
+		try {
+			const { data } = await $api.post('/teams', teamData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при создании команды:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
+	},
+
+	// Добавление участника в команду
+	addMember: async (teamData: {
+		is_capitan?: boolean;
+		UserId: string;
+		TeamId: string;
+	}) => {
+		console.log('Отправка запроса на добавление участника в команду:', teamData);
+		try {
+			// Проверим наличие всех требуемых полей
+			if (!teamData.UserId || !teamData.TeamId) {
+				throw new Error('Не все обязательные поля указаны');
+			}
+			
+			// Используем правильный URL согласно маршрутов сервера
+			const { data } = await $api.post('/team-members', teamData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при добавлении участника в команду:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
+	},
+
+	// Отправка заявки на участие в соревновании для команды
+	submitApplication: async (applicationData: {
+		UserId: string;
+		TeamId: string;
+		CompetitionId: string;
+		status?: string;
+	}) => {
+		console.log('Отправка заявки на участие в соревновании:', applicationData);
+		try {
+			const { data } = await $api.post('/applications', applicationData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при отправке заявки:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
 	}
 };
 

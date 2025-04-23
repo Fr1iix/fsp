@@ -15,6 +15,7 @@ import AboutPage from './pages/AboutPage.tsx';
 import CompetitionRequestPage from './pages/CompetitionRequestPage.tsx';
 import CompetitionRequestsPage from './pages/CompetitionRequestsPage.tsx';
 import AnalyticsPage from './pages/AnalyticsPage.tsx';
+import CompetitionParticipateForm from './pages/CompetitionParticipateForm.tsx';
 
 // Вспомогательный компонент для защищенных роутов
 interface ProtectedRouteProps {
@@ -118,6 +119,16 @@ function App() {
 
             <Route path="/competitions" element={<CompetitionListPage />} />
             <Route path="/competitions/:id" element={<CompetitionPage />} />
+            
+            <Route
+              path="/competitions/:id/participate"
+              element={
+                <ProtectedRoute>
+                  <CompetitionParticipateForm />
+                </ProtectedRoute>
+              }
+            />
+            
             <Route path="/teams" element={<TeamsPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />

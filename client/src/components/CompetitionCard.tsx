@@ -6,6 +6,8 @@ import { Calendar, Users, MapPin } from 'lucide-react';
 import { Competition } from '../types';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card.tsx';
 import Badge from './ui/Badge.tsx';
+import Button from './ui/Button.tsx';
+import { useAuthStore } from '../store/authStore.ts';
 
 interface CompetitionCardProps {
   competition: Competition;
@@ -13,6 +15,7 @@ interface CompetitionCardProps {
 
 const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition }) => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
 
   // Преобразуем дисциплину в русское название и определяем цвет бейджа
   const getDisciplineInfo = (discipline: Competition['discipline']) => {
@@ -71,8 +74,16 @@ const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition }) => {
   const formatName = getFormatName(competition.format);
   const statusInfo = getStatusInfo(competition);
 
+  // Проверяем, открыта ли регистрация
+  const isRegistrationOpen = statusInfo.text === 'Регистрация открыта';
+
   const handleClick = () => {
     navigate(`/competitions/${competition.id}`);
+  };
+
+  const handleParticipateClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Предотвращаем переход по карточке
+    navigate(`/competitions/${competition.id}/participate`);
   };
 
   return (
@@ -121,13 +132,18 @@ const CompetitionCard: React.FC<CompetitionCardProps> = ({ competition }) => {
         </div>
       </CardContent>
       
-      <CardFooter>
-        <div className="text-xs text-neutral-500">
-          Начало регистрации: {format(new Date(competition.registrationStart), 'd MMMM', { locale: ru })}
-          {' • '} 
-          Завершение регистрации: {format(new Date(competition.registrationEnd), 'd MMMM', { locale: ru })}
-        </div>
-      </CardFooter>
+      {isRegistrationOpen && user && (
+        <CardFooter className="pt-4 border-t border-neutral-100">
+          <Button 
+            variant="primary" 
+            size="sm" 
+            className="w-full"
+            onClick={handleParticipateClick}
+          >
+            Принять участие
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };

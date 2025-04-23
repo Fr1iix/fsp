@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { Calendar, MapPin, Users, Award, ArrowLeft, Plus } from 'lucide-react';
+import { Calendar, MapPin, Users, Award, ArrowLeft, Plus, UserPlus } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { Competition } from '../types';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
@@ -119,6 +119,11 @@ const CompetitionPage: React.FC = () => {
   const formatName = getFormatName(competition.format);
   const statusInfo = getStatusInfo(competition);
   const isOrganizer = user?.role === 'fsp' || user?.role === 'regional';
+  const isRegistrationOpen = statusInfo.text === 'Регистрация открыта';
+
+  const handleParticipateClick = () => {
+    navigate(`/competitions/${id}/participate`);
+  };
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 pt-24">
@@ -140,6 +145,19 @@ const CompetitionPage: React.FC = () => {
 
         <h1 className="text-3xl font-bold mb-4">{competition.title}</h1>
         <p className="text-neutral-600 mb-6">{competition.description}</p>
+
+        {isRegistrationOpen && user && (
+          <div className="mb-6">
+            <Button
+              variant="primary"
+              leftIcon={<UserPlus className="h-5 w-5" />}
+              onClick={handleParticipateClick}
+              className="w-full md:w-auto"
+            >
+              Принять участие
+            </Button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="flex items-center text-neutral-700">

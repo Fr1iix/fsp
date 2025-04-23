@@ -229,6 +229,11 @@ const CompetitionListPage: React.FC = () => {
     );
   };
 
+  const handleParticipateClick = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Предотвращаем переход по клику на карточку
+    navigate(`/competitions/${id}/participate`);
+  };
+
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 pt-24">
       <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">Соревнования</h1>
@@ -423,7 +428,17 @@ const CompetitionListPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="mt-6 md:mt-8 pt-4 border-t border-neutral-100 flex justify-end">
+                  <div className="mt-6 md:mt-8 pt-4 border-t border-neutral-100 flex justify-between">
+                    {competition.status === 'registration' && user && (
+                      <div className="text-primary-600 font-medium">
+                        <button 
+                          onClick={(e) => handleParticipateClick(e, competition.id)}
+                          className="bg-accent-500 text-white px-4 md:px-5 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center"
+                        >
+                          Принять участие
+                        </button>
+                      </div>
+                    )}
                     <div className="text-primary-600 font-medium flex items-center group-hover:translate-x-1 transition-transform">
                       <span className="bg-primary-500 text-white px-4 md:px-5 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center">
                         Подробнее
