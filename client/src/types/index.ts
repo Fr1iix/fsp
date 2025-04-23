@@ -16,7 +16,7 @@ export interface User {
 export interface AthleteProfile extends User {
   role: 'athlete';
   achievements: Achievement[];
-  teams: Team[];
+  teams: TeamExtended[];
   competitions: CompetitionRegistration[];
 }
 
@@ -56,6 +56,27 @@ export interface Competition {
 
 // Заявки на соревнования
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Team {
+  id: string;
+  name: string;
+  discription?: string;
+  CompetitionId?: string; // Используем заглавную букву, как в DB
+  points?: number;
+  result?: number;
+  teammates?: Array<{
+    UserId: string;
+    firstName?: string;
+    lastName?: string;
+    is_capitan?: boolean;
+  }>;
+  teammembers?: Array<{
+    UserId: string;
+    firstName?: string;
+    lastName?: string;
+    is_capitan?: boolean;
+  }>;
+}
 
 export interface Application {
   id: string;
@@ -101,7 +122,7 @@ export interface TeamMember {
   joinedAt: string;
 }
 
-export interface Team {
+export interface TeamExtended {
   id: string;
   name: string;
   competitionId: string;

@@ -148,9 +148,48 @@ export const competitionAPI = {
 
 // API для работы с заявками на соревнования
 export const applicationAPI = {
-	// Получение всех заявок (для администраторов и ФСП)
-	getAll: async (params?: { limit?: number; offset?: number; search?: string; status?: string }) => {
-		const { data } = await $api.get('/applications', { params });
+	// Получить все заявки (для админов)
+	getAll: async () => {
+		const { data } = await $api.get('/applications');
+		return data;
+	},
+
+	// Создать новую заявку
+	create: async (applicationData: any) => {
+		const { data } = await $api.post('/applications', applicationData);
+		return data;
+	},
+
+	// Обновить статус заявки
+	updateStatus: async (id: string, status: 'approved' | 'rejected') => {
+		const { data } = await $api.patch(`/applications/${id}/status`, { status });
+		return data;
+	},
+
+	// Создать заявку на участие в соревновании
+	createParticipation: async (competitionId: string, teamId?: string) => {
+		const { data } = await $api.post('/applications/participation', { 
+			CompetitionId: competitionId,
+			TeamId: teamId
+		});
+		return data;
+	},
+
+	// Получить заявки текущего пользователя
+	getMyApplications: async () => {
+		const { data } = await $api.get('/applications/my');
+		return data;
+	},
+
+	// Получить заявки для соревнований в регионе (для региональных представителей)
+	getRegionalApplications: async () => {
+		const { data } = await $api.get('/applications/regional');
+		return data;
+	},
+
+	// Получить одну заявку по ID
+	getOne: async (id: string) => {
+		const { data } = await $api.get(`/applications/${id}`);
 		return data;
 	},
 
@@ -158,32 +197,6 @@ export const applicationAPI = {
 	getByUser: async (userId: string) => {
 		const { data } = await $api.get(`/applications/user/${userId}`);
 		return data;
-	},
-
-	// Получение конкретной заявки
-	getOne: async (id: string) => {
-		const { data } = await $api.get(`/applications/${id}`);
-		return data;
-	},
-
-	// Создание заявки
-	create: async (application: any) => {
-		const { data } = await $api.post('/applications', application);
-		return data;
-	},
-
-	// Обновление статуса заявки (для ФСП)
-	updateStatus: async (id: string, status: 'pending' | 'approved' | 'rejected') => {
-		// Убедимся, что ID заявки в правильном формате
-		const applicationId = String(id);
-		console.log('Отправка запроса на обновление статуса:', { applicationId, status });
-		try {
-			const { data } = await $api.patch(`/applications/${applicationId}/status`, { status });
-			return data;
-		} catch (error) {
-			console.error('Ошибка при обновлении статуса заявки:', error);
-			throw error;
-		}
 	},
 
 	// Обновление заявки

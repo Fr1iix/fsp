@@ -122,7 +122,8 @@ const CompetitionResult = sequelize.define('competition_result', {
 
 User.hasOne(UserInfo, {
     foreignKey: 'UserId',
-    onDelete: 'CASCADE'
+    onDelete: 'CASCADE',
+    as: 'user_info'
 })
 UserInfo.belongsTo(User)
 
@@ -151,10 +152,12 @@ Adress.hasOne(Competition, {
 Competition.belongsTo(Adress)
 
 Competition.hasMany(Team, {
-    foreignKey: 'competitionId',
+    foreignKey: 'CompetitionId',
     onDelete: 'CASCADE'
 })
-Team.belongsTo(Competition)
+Team.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 User.hasOne(Teammembers, {
     foreignKey: 'UserId',
@@ -162,7 +165,7 @@ User.hasOne(Teammembers, {
 })
 Teammembers.belongsTo(User)
 
-Team.hasOne(Teammembers, {
+Team.hasMany(Teammembers, {
     foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
@@ -216,11 +219,13 @@ Competition.hasOne(Application, {
 })
 Application.belongsTo(Competition)
 
-Team.hasOne(Application, {
+Team.hasMany(Application, {
     foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
-Application.belongsTo(Team)
+Application.belongsTo(Team, {
+    foreignKey: 'TeamId'
+})
 
 // Добавляем связи для результатов соревнований
 Competition.hasMany(CompetitionResult, {

@@ -171,6 +171,17 @@ const ProfilePage: React.FC = () => {
                   </Button>
                 )}
 
+                {user.role === 'regional' && (
+                  <Button
+                    variant="primary"
+                    className="!bg-accent-500 shadow-md hover:!bg-accent-600 transition-all text-white"
+                    leftIcon={<ClipboardList className="h-4 w-4" />}
+                    onClick={() => navigate('/competition/applications')}
+                  >
+                    Посмотреть заявки
+                  </Button>
+                )}
+
                 {user.role === 'fsp' && (
                   <Button
                     variant="primary"

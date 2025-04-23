@@ -16,6 +16,7 @@ import CompetitionRequestPage from './pages/CompetitionRequestPage.tsx';
 import CompetitionRequestsPage from './pages/CompetitionRequestsPage.tsx';
 import AnalyticsPage from './pages/AnalyticsPage.tsx';
 import CompetitionParticipateForm from './pages/CompetitionParticipateForm.tsx';
+import CompetitionApplicationsPage from './pages/CompetitionApplicationsPage.tsx';
 
 // Вспомогательный компонент для защищенных роутов
 interface ProtectedRouteProps {
@@ -104,6 +105,15 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['fsp']}>
                   <CompetitionRequestsPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/competition/applications"
+              element={
+                <ProtectedRoute allowedRoles={['regional']}>
+                  <CompetitionApplicationsPage />
                 </ProtectedRoute>
               }
             />

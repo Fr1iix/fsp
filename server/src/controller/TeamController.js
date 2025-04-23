@@ -1,10 +1,10 @@
 const ApiError = require('../errorr/ApiError')
 const { Op } = require('sequelize');
-const {Team} = require('../models/models')
+const { Team, User, Teammembers, Competition } = require('../models/models')
 
 class TeamController {
-    getAll = (req, res, next) => {
-        try{
+    getAll = async (req, res, next) => {
+        try {
             let limit = parseInt(req.query.limit, 10) || 10;
             let offset = parseInt(req.query.offset, 10) || 0;
             const search = req.query.search || '';
@@ -17,29 +17,114 @@ class TeamController {
             }
             : {};
 
-            const team = Team.findAll({
+            // Загружаем команды с полной информацией
+            const teams = await Team.findAll({
                 where: whereClause,
-                limit, offset
-            })
+                limit, offset,
+                include: [
+                    {
+                        model: Competition,
+                        attributes: ['id', 'name', 'discription', 'status']
+                    },
+                    {
+                        model: Teammembers,
+                        include: [
+                            {
+                                model: User,
+                                attributes: ['id', 'email'],
+                                include: [{
+                                    model: require('../models/models').UserInfo,
+                                    as: 'user_info',
+                                    attributes: ['firstName', 'lastName', 'middleName', 'phone']
+                                }]
+                            }
+                        ]
+                    }
+                ]
+            });
 
-            return res.status(200).json(team)
-        }catch (error){
-            next(ApiError.badRequest(e.message))
+            console.log(`Найдено ${teams.length} команд`);
+            return res.status(200).json(teams);
+        } catch (error) {
+            console.error('Ошибка при получении списка команд:', error);
+            next(ApiError.badRequest(error.message));
         }        
     }
 
-    async getTeam(req, res){
-        const id = req.params.id
-        const OneTeam = await Team.findByPk(id)
-        return res.status(200).json(OneTeam)
+    async getTeam(req, res, next) {
+        try {
+            const id = req.params.id;
+            
+            // Загружаем команду с полной информацией
+            const oneTeam = await Team.findByPk(id, {
+                include: [
+                    {
+                        model: Competition,
+                        attributes: ['id', 'name', 'discription', 'status']
+                    },
+                    {
+                        model: Teammembers,
+                        include: [
+                            {
+                                model: User,
+                                attributes: ['id', 'email'],
+                                include: [{
+                                    model: require('../models/models').UserInfo,
+                                    as: 'user_info',
+                                    attributes: ['firstName', 'lastName', 'middleName', 'phone']
+                                }]
+                            }
+                        ]
+                    }
+                ]
+            });
+            
+            if (!oneTeam) {
+                return res.status(404).json({ message: 'Команда не найдена' });
+            }
+            
+            return res.status(200).json(oneTeam);
+        } catch (error) {
+            console.error('Ошибка при получении информации о команде:', error);
+            next(ApiError.badRequest(error.message));
+        }
     }
 
     async create(req, res, next) {
         try {
             let { CompetitionId, name, discription, points, result, teammembersId} = req.body
-            const team = await Team.create({CompetitionId, name, discription, points, result, teammembersId});
+            
+            console.log('Создание команды с параметрами:', {
+                CompetitionId, 
+                name, 
+                discription, 
+                points, 
+                result
+            });
+            
+            // Проверяем наличие обязательных полей
+            if (!name) {
+                return res.status(400).json({ message: 'Название команды обязательно' });
+            }
+            
+            const team = await Team.create({
+                CompetitionId, 
+                name, 
+                discription: discription || '', 
+                points: points || 0, 
+                result: result || 0, 
+                teammembersId
+            });
+            
+            console.log('Создана команда:', {
+                id: team.id,
+                name: team.name,
+                CompetitionId: team.CompetitionId
+            });
+            
             return res.status(200).json(team)
         } catch (e) {
+            console.error('Ошибка при создании команды:', e);
             next(ApiError.badRequest(e.message))
         }
     }
@@ -78,8 +163,6 @@ class TeamController {
             return res.status(500).json({error: 'Internal server error'});
         }
     }
-
-
 }
 
 module.exports = new TeamController();

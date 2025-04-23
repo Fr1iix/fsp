@@ -83,6 +83,21 @@ const CompetitionRequestPage: React.FC = () => {
 		}
 	};
 
+	// Функция для получения названия команды
+	const getTeamName = (team?: any, teamId?: string) => {
+		// Проверяем наличие данных о команде
+		if (team && team.name) {
+			return team.name;
+		}
+		
+		// Если нет данных о команде, но есть ID
+		if (teamId) {
+			return `Команда ID:${teamId}`;
+		}
+		
+		return 'Команда не указана';
+	};
+
 	if (submitSuccess) {
 		return (
 			<div className="min-h-screen bg-slate-50 pt-20 pb-12">

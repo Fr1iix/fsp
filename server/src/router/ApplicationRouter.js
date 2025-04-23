@@ -6,8 +6,8 @@ const checkRoleMiddleware = require('../middleware/checkRoleMiddleware')
 
 
 
-// Получение всех заявок (только для администраторов и ФСП)
-router.get('/', authMiddleware, checkRoleMiddleware(['admin', 'fsp']), ApplicationController.getAll)
+// Получение всех заявок (для администраторов, ФСП и региональных представителей)
+router.get('/', authMiddleware, checkRoleMiddleware(['admin', 'fsp', 'regional']), ApplicationController.getAll)
 
 // Получение заявок конкретного пользователя
 router.get('/user/:userId', authMiddleware, ApplicationController.getByUser)
@@ -18,8 +18,17 @@ router.get('/:id', authMiddleware, ApplicationController.getOne)
 // Создание новой заявки
 router.post('/', authMiddleware, ApplicationController.create)
 
-// Обновление статуса заявки (только для ФСП)
-router.patch('/:id/status', authMiddleware, checkRoleMiddleware(['fsp']), ApplicationController.updateStatus)
+// Создание новой заявки на участие в соревновании (для обычных пользователей)
+router.post('/participation', authMiddleware, ApplicationController.createParticipationRequest)
+
+// Получение заявок текущего пользователя
+router.get('/my', authMiddleware, ApplicationController.getMyApplications)
+
+// Получение заявок для соревнований в регионе пользователя (для региональных представителей)
+router.get('/regional', authMiddleware, checkRoleMiddleware(['regional']), ApplicationController.getRegionalApplications)
+
+// Обновление статуса заявки (для ФСП и региональных представителей)
+router.patch('/:id/status', authMiddleware, checkRoleMiddleware(['fsp', 'regional']), ApplicationController.updateStatus)
 
 // Полное обновление заявки
 router.put('/:id', authMiddleware, ApplicationController.updateOne)
