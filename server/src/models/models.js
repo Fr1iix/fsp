@@ -110,6 +110,16 @@ const Application = sequelize.define("application", {
     UUID: { type: DataTypes.STRING },
 })
 
+const CompetitionResult = sequelize.define('competition_result', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    TeamId: { type: DataTypes.INTEGER, foreignKey: true, allowNull: true },
+    place: { type: DataTypes.INTEGER },
+    points: { type: DataTypes.INTEGER },
+    isConfirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
+})
+
 User.hasOne(UserInfo, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
@@ -212,6 +222,25 @@ Team.hasOne(Application, {
 })
 Application.belongsTo(Team)
 
+// Добавляем связи для результатов соревнований
+Competition.hasMany(CompetitionResult, {
+    foreignKey: 'CompetitionId',
+    onDelete: 'CASCADE'
+})
+CompetitionResult.belongsTo(Competition)
+
+User.hasMany(CompetitionResult, {
+    foreignKey: 'UserId',
+    onDelete: 'CASCADE'
+})
+CompetitionResult.belongsTo(User)
+
+Team.hasMany(CompetitionResult, {
+    foreignKey: 'TeamId',
+    onDelete: 'CASCADE'
+})
+CompetitionResult.belongsTo(Team)
+
 module.exports = {
     sequelize,
     User,
@@ -226,5 +255,6 @@ module.exports = {
     Discipline,
     Regions,
     CompetitionRegion,
-    Application
+    Application,
+    CompetitionResult
 }
