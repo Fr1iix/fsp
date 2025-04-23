@@ -20,6 +20,7 @@ const RegisterPage: React.FC = () => {
   const [emailCheckLoading, setEmailCheckLoading] = useState(false);
   const [emailExistsError, setEmailExistsError] = useState<string | null>(null);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Если пользователь авторизован, перенаправляем на страницу профиля
   useEffect(() => {
@@ -82,12 +83,19 @@ const RegisterPage: React.FC = () => {
     }
   };
 
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate('/login');
+    }, 300);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
-  
+    <div className={`min-h-screen flex items-center justify-center bg-white px-4 py-12 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-        <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
+          <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
           <h1 className="text-3xl font-bold">Регистрация</h1>
           <p>
             Создайте учетную запись в Федерации спортивного программирования
@@ -106,7 +114,6 @@ const RegisterPage: React.FC = () => {
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Email */}
               <Input
                 label="Email"
                 type="email"
@@ -122,7 +129,6 @@ const RegisterPage: React.FC = () => {
                 })}
               />
 
-              {/* Пароль */}
               <Input
                 label="Пароль"
                 type="password"
@@ -138,7 +144,6 @@ const RegisterPage: React.FC = () => {
                 })}
               />
 
-              {/* Подтверждение пароля */}
               <Input
                 label="Подтвердите пароль"
                 type="password"
@@ -165,7 +170,7 @@ const RegisterPage: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4 pt-4 border-t border-neutral-200">
             <p className="text-center text-sm text-neutral-600">
               Уже есть учетная запись?{' '}
-              <Link to="/login" className="text-primary-600 hover:underline font-medium">
+              <Link to="/login" className="text-primary-600 hover:underline font-medium" onClick={handleLoginClick}>
                 Войти
               </Link>
             </p>

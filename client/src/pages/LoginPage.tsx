@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '../store/authStore.ts';
@@ -15,6 +15,7 @@ interface LoginFormData {
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login, isLoading, error } = useAuthStore();
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     defaultValues: {
@@ -28,8 +29,16 @@ const LoginPage: React.FC = () => {
     navigate('/');
   };
 
+  const handleRegisterClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsTransitioning(true);
+    setTimeout(() => {
+      navigate('/register');
+    }, 300);
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
+    <div className={`min-h-screen flex items-center justify-center bg-white px-4 py-12 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
@@ -91,7 +100,7 @@ const LoginPage: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4 pt-4 border-t border-neutral-200">
             <p className="text-center text-sm text-neutral-600">
               Еще нет учетной записи?{' '}
-              <Link to="/register" className="text-primary-600 hover:underline font-medium">
+              <Link to="/register" className="text-primary-600 hover:underline font-medium" onClick={handleRegisterClick}>
                 Зарегистрироваться
               </Link>
             </p>
