@@ -74,8 +74,35 @@ export const userAPI = {
 export const competitionAPI = {
 	// Получение списка соревнований
 	getAll: async () => {
-		const { data } = await $api.get('/competitions');
-		return data;
+		try {
+			console.log('Выполняем запрос к API для получения соревнований');
+			const { data } = await $api.get('/competitions/getCompetition');
+			console.log('Получен ответ от API соревнований:', data);
+
+			// Обеспечиваем, что результат всегда будет массивом
+			if (!data) {
+				console.warn('API вернул пустой ответ');
+				return [];
+			}
+
+			if (!Array.isArray(data)) {
+				console.warn('API вернул не массив:', data);
+				if (data.id) {
+					// Если получили одиночный объект
+					return [data];
+				}
+				return [];
+			}
+
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при получении списка соревнований:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
 	},
 
 	// Получение конкретного соревнования
@@ -86,8 +113,19 @@ export const competitionAPI = {
 
 	// Создание соревнования
 	create: async (competition: any) => {
-		const { data } = await $api.post('/competitions', competition);
-		return data;
+		console.log('Отправка запроса на создание соревнования:', competition);
+		try {
+			// Используем более подробный лог запроса
+			const { data } = await $api.post('/competitions', competition);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при создании соревнования:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
 	},
 
 	// Обновление соревнования
@@ -125,8 +163,16 @@ export const applicationAPI = {
 
 	// Обновление статуса заявки (для ФСП)
 	updateStatus: async (id: string, status: 'pending' | 'approved' | 'rejected') => {
-		const { data } = await $api.patch(`/applications/${id}/status`, { status });
-		return data;
+		// Убедимся, что ID заявки в правильном формате
+		const applicationId = String(id);
+		console.log('Отправка запроса на обновление статуса:', { applicationId, status });
+		try {
+			const { data } = await $api.patch(`/applications/${applicationId}/status`, { status });
+			return data;
+		} catch (error) {
+			console.error('Ошибка при обновлении статуса заявки:', error);
+			throw error;
+		}
 	},
 
 	// Обновление заявки
@@ -166,36 +212,36 @@ export const teamsAPI = {
 // API для работы с аналитикой
 export const analyticsAPI = {
 	// Получение аналитики по соревнованиям
-	getCompetitionsAnalytics: async (params?: { 
-		disciplineId?: string; 
-		regionId?: string; 
-		startDate?: string; 
-		endDate?: string; 
-		status?: string 
+	getCompetitionsAnalytics: async (params?: {
+		disciplineId?: string;
+		regionId?: string;
+		startDate?: string;
+		endDate?: string;
+		status?: string
 	}) => {
 		const { data } = await $api.get('/analytics/competitions', { params });
 		return data;
 	},
 
 	// Получение аналитики по спортсменам
-	getAthletesAnalytics: async (params?: { 
-		disciplineId?: string; 
-		regionId?: string 
+	getAthletesAnalytics: async (params?: {
+		disciplineId?: string;
+		regionId?: string
 	}) => {
 		const { data } = await $api.get('/analytics/athletes', { params });
 		return data;
 	},
 
 	// Экспорт данных в Excel
-	exportData: async (params?: { 
+	exportData: async (params?: {
 		type: 'competitions' | 'athletes';
-		disciplineId?: string; 
-		regionId?: string; 
-		startDate?: string; 
-		endDate?: string; 
-		status?: string 
+		disciplineId?: string;
+		regionId?: string;
+		startDate?: string;
+		endDate?: string;
+		status?: string
 	}) => {
-		const { data } = await $api.get('/analytics/export', { 
+		const { data } = await $api.get('/analytics/export', {
 			params,
 			responseType: 'blob'
 		});

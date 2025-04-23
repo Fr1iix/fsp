@@ -123,23 +123,37 @@ class ApplicationController {
 
     async updateStatus(req, res, next) {
         try {
-            const { id } = req.params;
+            // Получаем и проверяем id
+            let { id } = req.params;
+            console.log('Запрос на обновление статуса заявки:', { originalId: id, body: req.body });
+
+            // Пробуем преобразовать id в число, если он приходит как строка
+            if (isNaN(id)) {
+                return res.status(400).json({ message: 'Неверный формат ID заявки' });
+            }
+
+            id = parseInt(id, 10);
             const { status } = req.body;
 
             if (!['pending', 'approved', 'rejected'].includes(status)) {
                 return res.status(400).json({ message: 'Неверный статус заявки' });
             }
 
+            console.log('Поиск заявки по ID:', id);
             const application = await Application.findByPk(id);
+            console.log('Найдена заявка:', application);
+
             if (!application) {
                 return res.status(404).json({ message: 'Заявка не найдена' });
             }
 
             application.status = status;
             await application.save();
+            console.log('Заявка успешно обновлена:', { id, newStatus: status });
 
             return res.status(200).json(application);
         } catch (error) {
+            console.error('Ошибка при обновлении статуса заявки:', error);
             next(ApiError.badRequest(error.message));
         }
     }

@@ -6,5 +6,7 @@ router.delete('/deleteCompetition/:id', CompetitionController.deleteComp)
 router.put("/updateCompetition/:id", CompetitionController.updateOne)
 router.get("/Competition/:id", CompetitionController.getOneCompetition)
 router.get("/getCompetition", CompetitionController.getAll)
+router.get("/", CompetitionController.getAll)
+router.post("/", CompetitionController.create)
 
 module.exports = router
