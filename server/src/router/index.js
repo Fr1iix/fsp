@@ -15,12 +15,12 @@ const DisciplineRouter = require('./DisciplineRouter')
 const ProjectsRouter = require('./ProjectsRouter')
 const RegionsRouter = require('./RegionsRouter')
 const analyticsRouter = require('./analyticsRouter')
+const CompetitionResultRouter = require('./CompetitionResultRouter')
 
 router.use('/auth', authRouter)
 router.use('/user', userRouter)
 router.use('/userInfo', userInfoRouter)
 router.use('/analytics', analyticsRouter)
-
 router.use('/results', ResultRouter)
 router.use('/teams', TeamRouter)
 router.use('/competitions', CompetitionRouter)
@@ -32,5 +32,6 @@ router.use('/competition-region', CompetitionRegionRouter)
 router.use('/disciplines', DisciplineRouter)
 router.use('/projects', ProjectsRouter)
 router.use('/regions', RegionsRouter)
+router.use('/competition-results', CompetitionResultRouter)
 
 module.exports = router

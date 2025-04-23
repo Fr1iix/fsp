@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
 import ProfileEditPage from './pages/ProfileEditPage.tsx';
 import CompetitionListPage from './pages/CompetitionListPage.tsx';
+import CompetitionPage from './pages/CompetitionPage.tsx';
 import RegisterPage from './pages/RegisterPage.tsx';
 import TeamsPage from './pages/TeamsPage.tsx';
 import AboutPage from './pages/AboutPage.tsx';
@@ -116,6 +117,7 @@ function App() {
             />
 
             <Route path="/competitions" element={<CompetitionListPage />} />
+            <Route path="/competitions/:id" element={<CompetitionPage />} />
             <Route path="/teams" element={<TeamsPage />} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
