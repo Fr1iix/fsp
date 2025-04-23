@@ -27,7 +27,10 @@ const Header: React.FC = () => {
           <Link to="/" className="flex items-center space-x-3">
             <Code className="w-8 h-8 text-primary-600" />
             <div className="hidden md:block">
-              <div className="text-sm font-medium">Федерация Компьютерного Спорта</div>
+              <div className="text-sm font-medium">
+                <span className="hidden lg:inline">Федерация Компьютерного Спорта</span>
+                <span className="lg:hidden">ФКС</span>
+              </div>
               <div className="text-xs text-neutral-600">Спортивное программирование</div>
             </div>
           </Link>
@@ -49,9 +52,9 @@ const Header: React.FC = () => {
           </nav>
 
           {/* Правая часть - Desktop */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Социальные сети */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 ml-4 lg:ml-8">
               <a href="https://vk.com/russiafsp" target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center w-8 h-8 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
