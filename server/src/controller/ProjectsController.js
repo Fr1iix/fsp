@@ -1,8 +1,8 @@
 const ApiError = require("../errorr/ApiError")
 const { Op } = require('sequelize');
-const {Teammembers} = require("../models/models")
+const {Projects} = require("../models/models")
 
-class TeamMembersController{
+class ProjectsController{
     getAll = (req, res, next) => {
         try{
             let limit = parseInt(req.query.limit, 10) || 10;
@@ -17,12 +17,12 @@ class TeamMembersController{
             }
             : {};
 
-            const TeamMem = Teammembers.findAll({
+            const rpoj = Projects.findAll({
                 where: whereClause,
                 limit, offset
             })
 
-            return res.status(200).json(TeamMem)
+            return res.status(200).json(rpoj)
         }catch (error){
             next(ApiError.badRequest(e.message))
         }        
@@ -30,45 +30,46 @@ class TeamMembersController{
 
     async getOne(req, res){
         const id = req.params.id
-        const OneTeamMem = await Teammembers.findByPk(id)
-        return res.status(200).json(OneTeamMem)
+        const rpoj = await Projects.findByPk(id)
+        return res.status(200).json(rpoj)
     }
 
     async create(req, res, next) {
         try {
-            let {is_capitan, UserId, TeamId} = req.body
-            const TeamMem = await Teammembers.create({is_capitan, UserId, TeamId});
-            return res.status(200).json(TeamMem)
+            let {UserId, name, files} = req.body
+            const rpoj = await Projects.create({UserId, name, files});
+            return res.status(200).json(rpoj)
         } catch (e) {
             next(ApiError.badRequest(e.message))
         }
     }
 
-    async deleteResults(req,res){
+    async deleteAdress(req,res){
         const id = req.params.id
-        await Teammembers.destroy({where: {id}})
+        await Projects.destroy({where: {id}})
     }
 
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            is_capitan, UserId, TeamId
+            UserId, name, files
         } = req.body;
 
 
         try {
-            const TeamMem = await Teammembers.findOne({where: {id}});
+            const rpoj = await Projects.findOne({where: {id}});
 
-            if (!TeamMem) {
+            if (!rpoj) {
                 return res.status(404).json({error: 'User was not found'});
             }
-            TeamMem.is_capitan = is_capitan;
-            TeamMem.UserId = UserId;
-            TeamMem.TeamId = TeamId;
-            
-            await TeamMem.save();
 
-            return res.status(200).json(TeamMem);
+            rpoj.UserId = UserId;
+            rpoj.name = name;
+            rpoj.files = files;
+            
+            await rpoj.save();
+
+            return res.status(200).json(rpoj);
         } catch (error) {
             console.error(error);
             return res.status(500).json({error: 'Internal server error'});
@@ -76,4 +77,4 @@ class TeamMembersController{
     }
 }
 
-module.exports = new TeamMembersController();
+module.exports = new ProjectsController();

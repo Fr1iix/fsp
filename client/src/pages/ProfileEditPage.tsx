@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { User, Mail, Phone, Calendar, MapPin, Github, Info, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Github, Info, ArrowLeft } from 'lucide-react';
 
 interface ProfileFormData {
 	firstName: string;
@@ -14,7 +14,6 @@ interface ProfileFormData {
 	gender: string;
 	birthday: string;
 	phone: string;
-	address: string;
 	github: string;
 	discription: string;
 }
@@ -32,7 +31,6 @@ const ProfileEditPage: React.FC = () => {
 			gender: '',
 			birthday: '',
 			phone: '',
-			address: '',
 			github: '',
 			discription: ''
 		}
@@ -54,7 +52,6 @@ const ProfileEditPage: React.FC = () => {
 				setValue('gender', userInfo.gender || '');
 				setValue('birthday', userInfo.birthday ? new Date(userInfo.birthday).toISOString().split('T')[0] : '');
 				setValue('phone', userInfo.phone || '');
-				setValue('address', userInfo.address || '');
 				setValue('github', userInfo.github || '');
 				setValue('discription', userInfo.discription || '');
 			}
@@ -205,15 +202,6 @@ const ProfileEditPage: React.FC = () => {
 								className="bg-neutral-50 focus:bg-white transition-colors"
 								placeholder="+7 (___) ___-__-__"
 								{...register('phone')}
-							/>
-
-							<Input
-								label="Адрес"
-								fullWidth
-								leftIcon={<MapPin className="h-4 w-4 text-neutral-500" />}
-								className="bg-neutral-50 focus:bg-white transition-colors"
-								placeholder="Город, улица, дом"
-								{...register('address')}
 							/>
 
 							<Input

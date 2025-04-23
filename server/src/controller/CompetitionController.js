@@ -36,9 +36,14 @@ class CompetitionController{
 
     async create(req, res, next) {
         try {
-            let {AddressId, discipline, name, startdate, enddate, discription, format, type, status} = req.body
-            const comp = await Competition.create({AddressId, discipline, name, startdate, enddate, discription, format, type, status});
-            return res.status(200).json(result)
+            let {disciplineId, name, discription, format,
+                 type, startdate, enddate, startdate_cometition,
+                 enddate_cometition, maxParticipants, status, AddressId, regionId} = req.body
+            const comp = await Competition.create({
+                disciplineId, name, discription, format,
+                type, startdate, enddate, startdate_cometition,
+                enddate_cometition, maxParticipants, status, AddressId, regionId});
+            return res.status(200).json(comp)
         } catch (e) {
             next(ApiError.badRequest(e.message))
         }
@@ -51,9 +56,9 @@ class CompetitionController{
 
     async updateOne(req, res) {
         const {id} = req.params;
-        const {
-            AddressId, discipline, name, startdate,
-            enddate, discription, format, type, status
+        const {disciplineId, name, discription, format,
+            type, startdate, enddate, startdate_cometition,
+            enddate_cometition, maxParticipants, status, AddressId, regionId
         } = req.body;
 
 
@@ -64,15 +69,19 @@ class CompetitionController{
                 return res.status(404).json({error: 'User was not found'});
             }
 
-            comp.AddressId = AddressId;
-            comp.discipline = discipline;
+            comp.disciplineId = disciplineId;
             comp.name = name;
-            comp.startdate = startdate;
-            comp.enddate = enddate;
             comp.discription = discription;
             comp.format = format;
             comp.type = type;
+            comp.startdate = startdate;
+            comp.enddate = enddate;
+            comp.startdate_cometition = startdate_cometition;
+            comp.enddate_cometition = enddate_cometition;
+            comp.maxParticipants = maxParticipants;
             comp.status = status;
+            comp.AddressId = AddressId;
+            comp.regionId = regionId;
             
             await comp.save();
 

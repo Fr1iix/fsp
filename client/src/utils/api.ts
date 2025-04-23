@@ -97,6 +97,51 @@ export const competitionAPI = {
 	}
 };
 
+// API для работы с заявками на соревнования
+export const applicationAPI = {
+	// Получение всех заявок (для администраторов и ФСП)
+	getAll: async (params?: { limit?: number; offset?: number; search?: string; status?: string }) => {
+		const { data } = await $api.get('/applications', { params });
+		return data;
+	},
+
+	// Получение заявок конкретного пользователя
+	getByUser: async (userId: string) => {
+		const { data } = await $api.get(`/applications/user/${userId}`);
+		return data;
+	},
+
+	// Получение конкретной заявки
+	getOne: async (id: string) => {
+		const { data } = await $api.get(`/applications/${id}`);
+		return data;
+	},
+
+	// Создание заявки
+	create: async (application: any) => {
+		const { data } = await $api.post('/applications', application);
+		return data;
+	},
+
+	// Обновление статуса заявки (для ФСП)
+	updateStatus: async (id: string, status: 'pending' | 'approved' | 'rejected') => {
+		const { data } = await $api.patch(`/applications/${id}/status`, { status });
+		return data;
+	},
+
+	// Обновление заявки
+	update: async (id: string, updates: any) => {
+		const { data } = await $api.put(`/applications/${id}`, updates);
+		return data;
+	},
+
+	// Удаление заявки
+	delete: async (id: string) => {
+		const { data } = await $api.delete(`/applications/${id}`);
+		return data;
+	}
+};
+
 // API для работы с командами
 export const teamsAPI = {
 	// Получение списка команд

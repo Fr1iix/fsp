@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Info, User, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Info, User, Users, CheckCircle } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card.tsx';
 import { useAuthStore } from '../store/authStore.ts';
-import api from '../utils/api';
+import { applicationAPI } from '../utils/api';
+import { v4 as uuidv4 } from 'uuid';
 
 const CompetitionRequestPage: React.FC = () => {
 	const navigate = useNavigate();
@@ -46,15 +47,32 @@ const CompetitionRequestPage: React.FC = () => {
 		setSubmitError(null);
 
 		try {
-			// В будущем здесь будет отправка запроса на сервер
-			// Сейчас просто имитируем успешную отправку
-			await new Promise(resolve => setTimeout(resolve, 1000)); // Имитация запроса
+			// Создаем данные о соревновании
+			const competitionData = {
+				title: formData.title,
+				description: formData.description,
+				format: formData.format,
+				discipline: formData.discipline,
+				region: formData.region,
+				startDate: formData.startDate,
+				endDate: formData.endDate,
+				maxParticipants: formData.maxParticipants,
+			};
 
-			// Здесь будет реальная отправка запроса на бэкенд
-			// await api.post('/competitions/request', {
-			//   ...formData,
-			//   requesterId: user.id,
-			// });
+			console.log('Данные соревнования для заявки:', competitionData);
+
+			// Создаем данные для заявки с JSON-строкой данных о соревновании в UUID
+			const applicationData = {
+				UserId: user.id,
+				status: 'pending',
+				UUID: JSON.stringify(competitionData)
+			};
+
+			console.log('Отправляемые данные заявки:', applicationData);
+
+			// Отправляем заявку через API
+			const response = await applicationAPI.create(applicationData);
+			console.log('Ответ сервера:', response);
 
 			setSubmitSuccess(true);
 		} catch (error: any) {
@@ -67,23 +85,34 @@ const CompetitionRequestPage: React.FC = () => {
 
 	if (submitSuccess) {
 		return (
-			<div className="min-h-screen bg-slate-50 pt-20">
+			<div className="min-h-screen bg-slate-50 pt-20 pb-12">
 				<div className="container mx-auto max-w-2xl px-4 py-10">
-					<Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
-						<CardContent className="p-8 text-center">
-							<div className="mx-auto w-16 h-16 bg-success-100 rounded-full flex items-center justify-center mb-4">
-								<span className="text-success-600 text-3xl">✓</span>
+					<Card className="overflow-hidden !bg-white shadow-lg rounded-xl border-none">
+						<CardContent className="p-10 text-center">
+							<div className="mx-auto w-20 h-20 bg-success-100 rounded-full flex items-center justify-center mb-6 border-4 border-success-50 shadow-sm">
+								<CheckCircle className="text-success-600 h-10 w-10" />
 							</div>
 							<h2 className="text-2xl font-bold text-neutral-800 mb-4">Заявка успешно отправлена!</h2>
-							<p className="text-neutral-600 mb-6">
+							<p className="text-neutral-600 mb-8 text-lg">
 								Ваша заявка на создание соревнования была успешно отправлена и будет рассмотрена представителем ФСП.
 								Вы получите уведомление о решении в ближайшее время.
 							</p>
-							<div className="flex justify-center gap-4">
+							<div className="bg-primary-50 border border-primary-100 rounded-lg p-4 mb-8 text-left">
+								<p className="text-primary-700 flex items-start">
+									<Info className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+									<span>
+										После одобрения заявки соревнование будет автоматически создано и вы сможете управлять
+										им в панели администратора соревнований.
+									</span>
+								</p>
+							</div>
+							<div className="flex flex-col sm:flex-row justify-center gap-4">
 								<Button
 									onClick={() => navigate('/profile')}
 									variant="outline"
+									className="flex items-center justify-center py-2.5"
 								>
+									<User className="h-4 w-4 mr-2" />
 									Вернуться в профиль
 								</Button>
 								<Button
@@ -100,7 +129,9 @@ const CompetitionRequestPage: React.FC = () => {
 											maxParticipants: 50,
 										});
 									}}
+									className="flex items-center justify-center py-2.5"
 								>
+									<Calendar className="h-4 w-4 mr-2" />
 									Создать ещё одну заявку
 								</Button>
 							</div>
@@ -112,7 +143,7 @@ const CompetitionRequestPage: React.FC = () => {
 	}
 
 	return (
-		<div className="min-h-screen bg-slate-50 pt-20">
+		<div className="min-h-screen bg-slate-50 pt-20 pb-12">
 			<div className="container mx-auto max-w-3xl px-4 py-8">
 				<div className="mb-6">
 					<button
@@ -123,6 +154,12 @@ const CompetitionRequestPage: React.FC = () => {
 						Назад
 					</button>
 				</div>
+
+				<div className="flex items-center mb-8">
+					<Calendar className="h-8 w-8 mr-3 text-primary-600" />
+					<h1 className="text-3xl font-bold text-neutral-800">Создание заявки на соревнование</h1>
+				</div>
+
 				<div className="bg-primary-50 border border-primary-100 rounded-xl p-6 mb-10">
 					<h3 className="text-primary-800 font-semibold mb-3 flex items-center">
 						<Info className="h-5 w-5 mr-2 text-primary-600" />
@@ -138,169 +175,189 @@ const CompetitionRequestPage: React.FC = () => {
 					</p>
 				</div>
 
-				<Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none mb-8">
-					<CardHeader className="rounded-xl bg-neutral-50 border-b border-neutral-100 py-5">
-						<CardTitle className="text-xl font-semibold text-neutral-800 flex items-center justify-center">
-							<Calendar className="h-5 w-5 mr-2 text-primary-600" />
-							Создание заявки на соревнование
-						</CardTitle>
-					</CardHeader>
-
-					<CardContent className="p-6">
+				<Card className="overflow-hidden !bg-white shadow-lg rounded-xl border-none mb-8">
+					<CardContent className="p-8">
 						{submitError && (
-							<div className="mb-6 p-4 bg-error-50 border border-error-200 rounded-lg text-error-700">
+							<div className="mb-8 p-4 bg-error-50 border border-error-200 rounded-lg text-error-700">
 								<p className="font-medium">Ошибка:</p>
 								<p>{submitError}</p>
 							</div>
 						)}
 
 						<form onSubmit={handleSubmit}>
-							<div className="space-y-6">
+							<div className="space-y-8">
 								<div>
-									<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="title">
-										Название соревнования *
-									</label>
-									<input
-										type="text"
-										id="title"
-										name="title"
-										required
-										value={formData.title}
-										onChange={handleChange}
-										className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										placeholder="Введите название соревнования"
-									/>
-								</div>
+									<h3 className="text-lg font-semibold text-neutral-800 mb-6 pb-2 border-b border-neutral-100">
+										Основная информация
+									</h3>
 
-								<div>
-									<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="description">
-										Описание соревнования *
-									</label>
-									<textarea
-										id="description"
-										name="description"
-										required
-										value={formData.description}
-										onChange={handleChange}
-										rows={5}
-										className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										placeholder="Опишите цель, задачи и условия соревнования"
-									></textarea>
-								</div>
+									<div className="space-y-6">
+										<div>
+											<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="title">
+												Название соревнования *
+											</label>
+											<input
+												type="text"
+												id="title"
+												name="title"
+												required
+												value={formData.title}
+												onChange={handleChange}
+												className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												placeholder="Введите название соревнования"
+											/>
+										</div>
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="format">
-											Формат соревнования *
-										</label>
-										<select
-											id="format"
-											name="format"
-											required
-											value={formData.format}
-											onChange={handleChange}
-											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										>
-											<option value="open">Открытый</option>
-											<option value="regional">Региональный</option>
-											<option value="federal">Федеральный</option>
-										</select>
-									</div>
-
-									<div>
-										<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="discipline">
-											Дисциплина *
-										</label>
-										<select
-											id="discipline"
-											name="discipline"
-											required
-											value={formData.discipline}
-											onChange={handleChange}
-											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										>
-											<option value="product">Продуктовая разработка</option>
-											<option value="security">Информационная безопасность</option>
-											<option value="algorithm">Алгоритмы</option>
-											<option value="robotics">Робототехника</option>
-											<option value="drones">Дроны</option>
-										</select>
+										<div>
+											<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="description">
+												Описание соревнования *
+											</label>
+											<textarea
+												id="description"
+												name="description"
+												required
+												value={formData.description}
+												onChange={handleChange}
+												rows={5}
+												className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												placeholder="Опишите цель, задачи и условия соревнования"
+											></textarea>
+										</div>
 									</div>
 								</div>
 
 								<div>
-									<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="region">
-										Регион проведения *
-									</label>
-									<input
-										type="text"
-										id="region"
-										name="region"
-										required
-										value={formData.region}
-										onChange={handleChange}
-										className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										placeholder="Введите регион проведения"
-									/>
-								</div>
+									<h3 className="text-lg font-semibold text-neutral-800 mb-6 pb-2 border-b border-neutral-100">
+										Параметры соревнования
+									</h3>
 
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-									<div>
-										<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="startDate">
-											Дата начала *
-										</label>
-										<input
-											type="date"
-											id="startDate"
-											name="startDate"
-											required
-											value={formData.startDate}
-											onChange={handleChange}
-											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										/>
-									</div>
+									<div className="space-y-6">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+											<div>
+												<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="format">
+													Формат соревнования *
+												</label>
+												<select
+													id="format"
+													name="format"
+													required
+													value={formData.format}
+													onChange={handleChange}
+													className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												>
+													<option value="open">Открытый</option>
+													<option value="regional">Региональный</option>
+													<option value="federal">Федеральный</option>
+												</select>
+											</div>
 
-									<div>
-										<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="endDate">
-											Дата окончания *
-										</label>
-										<input
-											type="date"
-											id="endDate"
-											name="endDate"
-											required
-											value={formData.endDate}
-											onChange={handleChange}
-											className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-										/>
+											<div>
+												<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="discipline">
+													Дисциплина *
+												</label>
+												<select
+													id="discipline"
+													name="discipline"
+													required
+													value={formData.discipline}
+													onChange={handleChange}
+													className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												>
+													<option value="product">Продуктовая разработка</option>
+													<option value="security">Информационная безопасность</option>
+													<option value="algorithm">Алгоритмы</option>
+													<option value="robotics">Робототехника</option>
+													<option value="drones">Дроны</option>
+												</select>
+											</div>
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="region">
+												Регион проведения *
+											</label>
+											<input
+												type="text"
+												id="region"
+												name="region"
+												required
+												value={formData.region}
+												onChange={handleChange}
+												className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												placeholder="Введите регион проведения"
+											/>
+										</div>
 									</div>
 								</div>
 
 								<div>
-									<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="maxParticipants">
-										Максимальное количество участников
-									</label>
-									<input
-										type="number"
-										id="maxParticipants"
-										name="maxParticipants"
-										value={formData.maxParticipants}
-										onChange={handleChange}
-										min={1}
-										max={1000}
-										className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-									/>
+									<h3 className="text-lg font-semibold text-neutral-800 mb-6 pb-2 border-b border-neutral-100">
+										Даты и участники
+									</h3>
+
+									<div className="space-y-6">
+										<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+											<div>
+												<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="startDate">
+													Дата начала *
+												</label>
+												<input
+													type="date"
+													id="startDate"
+													name="startDate"
+													required
+													value={formData.startDate}
+													onChange={handleChange}
+													min={new Date().toISOString().split('T')[0]}
+													className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												/>
+											</div>
+
+											<div>
+												<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="endDate">
+													Дата окончания *
+												</label>
+												<input
+													type="date"
+													id="endDate"
+													name="endDate"
+													required
+													value={formData.endDate}
+													onChange={handleChange}
+													min={formData.startDate || new Date().toISOString().split('T')[0]}
+													className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+												/>
+											</div>
+										</div>
+
+										<div>
+											<label className="block text-sm font-medium text-neutral-700 mb-1" htmlFor="maxParticipants">
+												Максимальное число участников *
+											</label>
+											<input
+												type="number"
+												id="maxParticipants"
+												name="maxParticipants"
+												required
+												min={1}
+												max={1000}
+												value={formData.maxParticipants}
+												onChange={handleChange}
+												className="w-full px-4 py-2.5 rounded-lg border border-neutral-300 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+											/>
+										</div>
+									</div>
 								</div>
 
-								<div className="pt-4 flex justify-end">
+								<div className="pt-6">
 									<Button
 										type="submit"
 										disabled={isSubmitting}
-										className="px-6 shadow-sm hover:shadow transition-all"
+										className="w-full flex items-center justify-center py-3 text-lg shadow-md hover:shadow-lg transition-shadow"
 									>
 										{isSubmitting ? (
 											<>
-												<span className="mr-2 inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+												<span className="mr-2 animate-spin">◌</span>
 												Отправка...
 											</>
 										) : (

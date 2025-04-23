@@ -36,8 +36,8 @@ class AdressController{
 
     async create(req, res, next) {
         try {
-            let {region, town, street} = req.body
-            const address = await Adress.create({region, town, street});
+            let {regionId, town, street} = req.body
+            const address = await Adress.create({regionId, town, street});
             return res.status(200).json(address)
         } catch (e) {
             next(ApiError.badRequest(e.message))
@@ -52,7 +52,7 @@ class AdressController{
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            region, town, street
+            regionId, town, street
         } = req.body;
 
 
@@ -63,7 +63,7 @@ class AdressController{
                 return res.status(404).json({error: 'User was not found'});
             }
 
-            adress.region = region;
+            adress.regionId = regionId;
             adress.town = town;
             adress.street = street;
             

@@ -22,18 +22,18 @@ export interface AthleteProfile extends User {
 
 // Типы соревнований
 export type CompetitionFormat = 'open' | 'regional' | 'federal';
-export type CompetitionDiscipline = 
-  | 'product' 
-  | 'security' 
-  | 'algorithm' 
-  | 'robotics' 
+export type CompetitionDiscipline =
+  | 'product'
+  | 'security'
+  | 'algorithm'
+  | 'robotics'
   | 'drones';
 
-export type CompetitionStatus = 
+export type CompetitionStatus =
   | 'draft'
-  | 'registration' 
-  | 'in_progress' 
-  | 'completed' 
+  | 'registration'
+  | 'in_progress'
+  | 'completed'
   | 'cancelled';
 
 export interface Competition {
@@ -52,6 +52,41 @@ export interface Competition {
   maxParticipants?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// Заявки на соревнования
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected';
+
+export interface Application {
+  id: string;
+  UserId: string;
+  TeamId?: string;
+  CompetitionId?: string;
+  status: ApplicationStatus;
+  UUID?: string;
+  createdAt: string;
+  updatedAt: string;
+  User?: User;
+  Team?: Team;
+  Competition?: Competition;
+  competitionData?: any;
+}
+
+export interface CompetitionRequest {
+  id: string;
+  title: string;
+  description: string;
+  format: CompetitionFormat;
+  discipline: CompetitionDiscipline;
+  region: string;
+  startDate: string;
+  endDate: string;
+  maxParticipants: number;
+  requesterId: string;
+  requesterName: string;
+  requesterRegion: string;
+  status: ApplicationStatus;
+  createdAt: string;
 }
 
 // Команды
@@ -78,10 +113,10 @@ export interface Team {
 }
 
 // Регистрации
-export type RegistrationStatus = 
-  | 'pending' 
-  | 'approved' 
-  | 'rejected' 
+export type RegistrationStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
   | 'withdrawn';
 
 export interface CompetitionRegistration {
