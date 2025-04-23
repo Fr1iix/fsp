@@ -3,13 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X, Code, User, LogOut } from 'lucide-react';
 import Button from './ui/Button.tsx';
 import { useAuthStore } from '../store/authStore.ts';
-import { useTransition } from '../context/TransitionContext.tsx';
+
 
 const Header: React.FC = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuthStore();
-  const { startTransition } = useTransition();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -20,19 +19,12 @@ const Header: React.FC = () => {
     navigate('/');
   };
 
-  const handleNavigation = (path: string) => {
-    startTransition();
-    setTimeout(() => {
-      navigate(path);
-    }, 500);
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-50 border-b border-neutral-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Логотип */}
-          <Link to="/" className="flex items-center space-x-3" onClick={() => handleNavigation('/')}>
+          <Link to="/" className="flex items-center space-x-3">
             <Code className="w-8 h-8 text-primary-600" />
             <div className="hidden md:block">
               <div className="text-sm font-medium">
@@ -45,16 +37,16 @@ const Header: React.FC = () => {
 
           {/* Навигация - Desktop */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-sm text-neutral-700 hover:text-primary-600" onClick={() => handleNavigation('/')}>
+            <Link to="/" className="text-sm text-neutral-700 hover:text-primary-600">
               Главная
             </Link>
-            <Link to="/competitions" className="text-sm text-neutral-700 hover:text-primary-600" onClick={() => handleNavigation('/competitions')}>
+            <Link to="/competitions" className="text-sm text-neutral-700 hover:text-primary-600">
               Соревнования
             </Link>
-            <Link to="/teams" className="text-sm text-neutral-700 hover:text-primary-600" onClick={() => handleNavigation('/teams')}>
+            <Link to="/teams" className="text-sm text-neutral-700 hover:text-primary-600">
               Команды
             </Link>
-            <Link to="/about" className="text-sm text-neutral-700 hover:text-primary-600" onClick={() => handleNavigation('/about')}>
+            <Link to="/about" className="text-sm text-neutral-700 hover:text-primary-600">
               О нас
             </Link>
           </nav>
@@ -62,7 +54,7 @@ const Header: React.FC = () => {
           {/* Правая часть - Desktop */}
           <div className="hidden md:flex items-center space-x-4 lg:space-x-8">
             {/* Социальные сети */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 ml-4 lg:ml-8">
               <a href="https://vk.com/russiafsp" target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center w-8 h-8 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors">
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -85,7 +77,7 @@ const Header: React.FC = () => {
                     variant="outline"
                     size="sm"
                     leftIcon={<User className="h-4 w-4" />}
-                    onClick={() => handleNavigation('/profile')}
+                    onClick={() => navigate('/profile')}
                   >
                     Профиль
                   </Button>
@@ -103,13 +95,13 @@ const Header: React.FC = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleNavigation('/login')}
+                    onClick={() => navigate('/login')}
                   >
                     Войти
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => handleNavigation('/register')}
+                    onClick={() => navigate('/register')}
                   >
                     Регистрация
                   </Button>
@@ -129,27 +121,27 @@ const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white/80 backdrop-blur-sm border-t border-neutral-100">
           <div className="px-4 py-2 space-y-1">
-            <Link to="/" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md" onClick={() => handleNavigation('/')}>
+            <Link to="/" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               Главная
             </Link>
-            <Link to="/competitions" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md" onClick={() => handleNavigation('/competitions')}>
+            <Link to="/competitions" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               Соревнования
             </Link>
-            <Link to="/teams" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md" onClick={() => handleNavigation('/teams')}>
+            <Link to="/teams" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               Команды
             </Link>
-            <Link to="/about" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md" onClick={() => handleNavigation('/about')}>
+            <Link to="/about" className="block px-3 py-2 text-base text-neutral-700 hover:bg-neutral-50 rounded-md">
               О нас
             </Link>
 
-            <div className="pt-2 space-y-2">
+            <div className="pt-4 space-y-2">
               {user ? (
                 <>
                   <Button
                     variant="outline"
                     className="w-full flex items-center justify-center"
                     leftIcon={<User className="h-4 w-4 mr-2" />}
-                    onClick={() => handleNavigation('/profile')}
+                    onClick={() => navigate('/profile')}
                   >
                     Профиль
                   </Button>
@@ -167,13 +159,13 @@ const Header: React.FC = () => {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => handleNavigation('/login')}
+                    onClick={() => navigate('/login')}
                   >
                     Войти
                   </Button>
                   <Button
                     className="w-full"
-                    onClick={() => handleNavigation('/register')}
+                    onClick={() => navigate('/register')}
                   >
                     Регистрация
                   </Button>
