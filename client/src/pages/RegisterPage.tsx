@@ -157,7 +157,7 @@ const RegisterPage: React.FC = () => {
                 fullWidth
                 isLoading={isLoading || emailCheckLoading}
               >
-                Зарегистрироватьсяlll
+                Зарегистрироваться
               </Button>
             </form>
           </CardContent>
