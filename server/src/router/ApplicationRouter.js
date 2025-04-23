@@ -4,6 +4,8 @@ const ApplicationController = require('../controller/ApplicationController')
 const authMiddleware = require('../middleware/authmiddleware')
 const checkRoleMiddleware = require('../middleware/checkRoleMiddleware')
 
+
+
 // Получение всех заявок (только для администраторов и ФСП)
 router.get('/', authMiddleware, checkRoleMiddleware(['admin', 'fsp']), ApplicationController.getAll)
 
