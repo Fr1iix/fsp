@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore.ts';
 import { Code, Mail, Lock } from 'lucide-react';
 import Button from '../components/ui/Button.tsx';
 import Input from '../components/ui/Input.tsx';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card.tsx';
+import { Card, CardContent, CardFooter } from '../components/ui/Card.tsx';
 
 interface LoginFormData {
   email: string;
@@ -38,8 +38,8 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center bg-white px-4 py-12 transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
+      <div className={`w-full max-w-md transition-opacity duration-300 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
         <div className="text-center mb-8">
           <Code className="h-12 w-12 text-primary-600 mx-auto mb-2" />
           <h1 className="text-3xl font-bold">Вход в систему</h1>
