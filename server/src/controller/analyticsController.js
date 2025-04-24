@@ -33,16 +33,36 @@ class AnalyticsController {
                     {
                         model: Discipline,
                         attributes: ['name']
-                    },
-                    {
-                        model: Regions,
-                        attributes: ['name']
                     }
                 ]
             });
 
-            return res.json(competitions);
+            // Получаем регионы отдельно, чтобы связать с соревнованиями
+            const regions = await Regions.findAll({
+                attributes: ['id', 'name']
+            });
+
+            // Создаем карту регионов для быстрого доступа
+            const regionsMap = {};
+            regions.forEach(region => {
+                regionsMap[region.id] = region.name;
+            });
+
+            // Форматируем данные для отображения на фронтенде
+            const formattedCompetitions = competitions.map(comp => ({
+                id: comp.id,
+                name: comp.name,
+                discipline: comp.Discipline?.name || 'Нет данных',
+                region: comp.regionId ? regionsMap[comp.regionId] || 'Нет данных' : 'Нет данных',
+                startdate: comp.startdate,
+                status: comp.status || 'Нет данных'
+            }));
+
+            console.log(`Найдено соревнований: ${formattedCompetitions.length}`);
+            
+            return res.json(formattedCompetitions);
         } catch (e) {
+            console.error("Ошибка при получении аналитики соревнований:", e);
             return res.status(500).json({ message: "Ошибка при получении аналитики соревнований" });
         }
     }
@@ -209,17 +229,27 @@ class AnalyticsController {
         const competitions = await Competition.findAll({
             where: this.buildCompetitionFilters(filters),
             include: [
-                { model: Discipline, attributes: ['name'] },
-                { model: Regions, attributes: ['name'] }
+                { model: Discipline, attributes: ['name'] }
             ]
+        });
+
+        // Получаем регионы отдельно
+        const regions = await Regions.findAll({
+            attributes: ['id', 'name']
+        });
+
+        // Создаем карту регионов для быстрого доступа
+        const regionsMap = {};
+        regions.forEach(region => {
+            regionsMap[region.id] = region.name;
         });
 
         return competitions.map(comp => ({
             name: comp.name,
-            discipline: comp.Discipline?.name,
-            region: comp.Regions?.name,
+            discipline: comp.Discipline?.name || 'Нет данных',
+            region: comp.regionId ? regionsMap[comp.regionId] || 'Нет данных' : 'Нет данных',
             startDate: comp.startdate,
-            status: comp.status
+            status: comp.status || 'Нет данных'
         }));
     }
 
@@ -294,4 +324,4 @@ class AnalyticsController {
     }
 }
 
-module.exports = new AnalyticsController(); 
+module.exports = new AnalyticsController();
