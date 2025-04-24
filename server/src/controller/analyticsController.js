@@ -331,11 +331,26 @@ class AnalyticsController {
                         disciplineName = typeToName[comp.type] || comp.type;
                     }
                     
+                    // Проверяем валидность полей
+                    const name = comp.name && typeof comp.name === 'string' && comp.name.trim() !== '' ? 
+                                comp.name : 'Без названия';
+                    
+                    // Обработка даты
+                    let startDate;
+                    try {
+                        startDate = comp.startdate instanceof Date ? 
+                                    comp.startdate : 
+                                    comp.startdate ? new Date(comp.startdate) : null;
+                    } catch (e) {
+                        console.error('Ошибка при конвертации даты:', e);
+                        startDate = null;
+                    }
+                    
                     return {
-                        name: comp.name,
+                        name: name,
                         discipline: disciplineName || 'Нет данных',
                         region: comp.regionId && regionsMap[comp.regionId] ? regionsMap[comp.regionId] : 'Нет данных',
-                        startDate: comp.startdate,
+                        startDate: startDate,
                         status: comp.status || 'Нет данных'
                     };
                 });
@@ -407,12 +422,34 @@ class AnalyticsController {
             // Настройка заголовков и данных в зависимости от типа
             if (type === 'competitions') {
                 worksheet.columns = [
-                    { header: 'Название', key: 'name' },
-                    { header: 'Дисциплина', key: 'discipline' },
-                    { header: 'Регион', key: 'region' },
-                    { header: 'Дата начала', key: 'startDate' },
-                    { header: 'Статус', key: 'status' }
+                    { header: 'Название', key: 'name', width: 30 },
+                    { header: 'Дисциплина', key: 'discipline', width: 30 },
+                    { header: 'Регион', key: 'region', width: 20 },
+                    { header: 'Дата начала', key: 'startDate', width: 15 },
+                    { header: 'Статус', key: 'status', width: 20 }
                 ];
+                
+                // Форматирование дат в Excel
+                data = data.map(item => {
+                    // Преобразуем дату в JavaScript Date объект
+                    let startDate = item.startDate;
+                    if (typeof startDate === 'string') {
+                        startDate = new Date(startDate);
+                    }
+                    
+                    // Проверяем, что startDate - валидная дата
+                    if (!(startDate instanceof Date) || isNaN(startDate)) {
+                        startDate = null;
+                    }
+                    
+                    return {
+                        ...item,
+                        startDate: startDate
+                    };
+                });
+                
+                // Устанавливаем форматирование для колонки дат
+                worksheet.getColumn('startDate').numFmt = 'dd.mm.yyyy';
                 
                 // Проверка соответствия ключей в данных и колонках
                 console.log('Ключи в колонках:', worksheet.columns.map(col => col.key));
@@ -421,9 +458,9 @@ class AnalyticsController {
                 }
             } else {
                 worksheet.columns = [
-                    { header: 'ФИО', key: 'fullName' },
-                    { header: 'Регион', key: 'region' },
-                    { header: 'Количество соревнований', key: 'competitionsCount' }
+                    { header: 'ФИО', key: 'fullName', width: 30 },
+                    { header: 'Регион', key: 'region', width: 20 },
+                    { header: 'Количество соревнований', key: 'competitionsCount', width: 15 }
                 ];
                 
                 // Проверка соответствия ключей в данных и колонках
@@ -433,17 +470,180 @@ class AnalyticsController {
                 }
             }
 
-            // Форматирование дат в Excel
-            if (type === 'competitions') {
-                data = data.map(item => ({
-                    ...item,
-                    startDate: item.startDate instanceof Date ? item.startDate : new Date(item.startDate)
-                }));
-            }
-
             try {
+                // Добавляем строки данных в таблицу
                 worksheet.addRows(data);
                 console.log('Строки успешно добавлены в таблицу');
+                
+                // Автоматическая настройка ширины столбцов
+                worksheet.columns.forEach(column => {
+                    column.width = column.width || 15;
+                });
+                
+                // Применяем стили к заголовкам
+                worksheet.getRow(1).font = { bold: true };
+                worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+                
+                // Установка границ ячеек
+                const borderStyle = {
+                    top: { style: 'thin' },
+                    left: { style: 'thin' },
+                    bottom: { style: 'thin' },
+                    right: { style: 'thin' }
+                };
+                
+                // Применение границ и дополнительное форматирование
+                for (let i = 1; i <= worksheet.rowCount; i++) {
+                    const row = worksheet.getRow(i);
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.border = borderStyle;
+                        cell.alignment = { vertical: 'middle' };
+                        
+                        // Дополнительное форматирование для дат
+                        if (i > 1 && type === 'competitions' && cell.col === worksheet.getColumn('startDate')?.number) {
+                            if (cell.value) {
+                                cell.numFmt = 'dd.mm.yyyy';
+                            }
+                        }
+                    });
+                    row.commit();
+                }
+                
+                // Автофильтр для заголовков
+                worksheet.autoFilter = {
+                    from: { row: 1, column: 1 },
+                    to: { row: 1, column: worksheet.columnCount }
+                };
+                
+                // Добавляем второй лист с агрегированными данными
+                if (type === 'competitions' && data.length > 0) {
+                    // Создаем лист для агрегированных данных
+                    const summarySheet = workbook.addWorksheet('Агрегированные данные');
+                    
+                    // Подготавливаем данные по дисциплинам
+                    const disciplineGroups = {};
+                    data.forEach(item => {
+                        if (!disciplineGroups[item.discipline]) {
+                            disciplineGroups[item.discipline] = 0;
+                        }
+                        disciplineGroups[item.discipline]++;
+                    });
+                    
+                    // Записываем данные по дисциплинам
+                    summarySheet.getCell('A1').value = 'Распределение соревнований по дисциплинам';
+                    summarySheet.getCell('A1').font = { bold: true, size: 14 };
+                    summarySheet.mergeCells('A1:B1');
+                    
+                    summarySheet.getCell('A2').value = 'Дисциплина';
+                    summarySheet.getCell('B2').value = 'Количество';
+                    
+                    let rowIndex = 3;
+                    Object.entries(disciplineGroups).forEach(([discipline, count]) => {
+                        summarySheet.getCell(`A${rowIndex}`).value = discipline;
+                        summarySheet.getCell(`B${rowIndex}`).value = count;
+                        rowIndex++;
+                    });
+                    
+                    // Подготавливаем данные по статусам
+                    const statusGroups = {};
+                    data.forEach(item => {
+                        if (!statusGroups[item.status]) {
+                            statusGroups[item.status] = 0;
+                        }
+                        statusGroups[item.status]++;
+                    });
+                    
+                    // Записываем данные по статусам
+                    rowIndex += 2;
+                    summarySheet.getCell(`A${rowIndex}`).value = 'Распределение соревнований по статусам';
+                    summarySheet.getCell(`A${rowIndex}`).font = { bold: true, size: 14 };
+                    summarySheet.mergeCells(`A${rowIndex}:B${rowIndex}`);
+                    
+                    rowIndex++;
+                    summarySheet.getCell(`A${rowIndex}`).value = 'Статус';
+                    summarySheet.getCell(`B${rowIndex}`).value = 'Количество';
+                    
+                    rowIndex++;
+                    Object.entries(statusGroups).forEach(([status, count]) => {
+                        summarySheet.getCell(`A${rowIndex}`).value = status;
+                        summarySheet.getCell(`B${rowIndex}`).value = count;
+                        rowIndex++;
+                    });
+                    
+                    // Форматируем лист с агрегированными данными
+                    summarySheet.getColumn('A').width = 40;
+                    summarySheet.getColumn('B').width = 15;
+                    
+                    // Стили для заголовков
+                    ['A2', 'B2', `A${rowIndex-Object.keys(statusGroups).length-1}`, `B${rowIndex-Object.keys(statusGroups).length-1}`].forEach(cell => {
+                        summarySheet.getCell(cell).font = { bold: true };
+                        summarySheet.getCell(cell).alignment = { vertical: 'middle', horizontal: 'center' };
+                    });
+                    
+                    // Добавляем границы для таблиц
+                    const borderStyle = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    
+                    for (let i = 2; i < rowIndex; i++) {
+                        summarySheet.getCell(`A${i}`).border = borderStyle;
+                        summarySheet.getCell(`B${i}`).border = borderStyle;
+                    }
+                    
+                } else if (type === 'athletes' && data.length > 0) {
+                    // Создаем лист для агрегированных данных
+                    const summarySheet = workbook.addWorksheet('Агрегированные данные');
+                    
+                    // Подготавливаем данные по регионам
+                    const regionGroups = {};
+                    data.forEach(item => {
+                        if (!regionGroups[item.region]) {
+                            regionGroups[item.region] = 0;
+                        }
+                        regionGroups[item.region]++;
+                    });
+                    
+                    // Записываем данные по регионам
+                    summarySheet.getCell('A1').value = 'Распределение спортсменов по регионам';
+                    summarySheet.getCell('A1').font = { bold: true, size: 14 };
+                    summarySheet.mergeCells('A1:B1');
+                    
+                    summarySheet.getCell('A2').value = 'Регион';
+                    summarySheet.getCell('B2').value = 'Количество спортсменов';
+                    
+                    let rowIndex = 3;
+                    Object.entries(regionGroups).forEach(([region, count]) => {
+                        summarySheet.getCell(`A${rowIndex}`).value = region;
+                        summarySheet.getCell(`B${rowIndex}`).value = count;
+                        rowIndex++;
+                    });
+                    
+                    // Форматируем лист с агрегированными данными
+                    summarySheet.getColumn('A').width = 40;
+                    summarySheet.getColumn('B').width = 15;
+                    
+                    // Стили для заголовков
+                    ['A2', 'B2'].forEach(cell => {
+                        summarySheet.getCell(cell).font = { bold: true };
+                        summarySheet.getCell(cell).alignment = { vertical: 'middle', horizontal: 'center' };
+                    });
+                    
+                    // Добавляем границы для таблицы
+                    const borderStyle = {
+                        top: { style: 'thin' },
+                        left: { style: 'thin' },
+                        bottom: { style: 'thin' },
+                        right: { style: 'thin' }
+                    };
+                    
+                    for (let i = 2; i < rowIndex; i++) {
+                        summarySheet.getCell(`A${i}`).border = borderStyle;
+                        summarySheet.getCell(`B${i}`).border = borderStyle;
+                    }
+                }
             } catch (error) {
                 console.error('Ошибка при добавлении строк в таблицу:', error);
                 // Выводим дополнительную информацию для отладки
