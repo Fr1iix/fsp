@@ -536,13 +536,9 @@ class ApplicationController {
                 
                 // Получаем информацию о пользователе
                 const user = await User.findByPk(req.user.id);
-                if (!user || !user.idRegions) {
-                    console.log('У регионального представителя не указан регион');
-                    return res.status(403).json({ message: 'У пользователя не задан регион' });
-                }
                 
-                // Проверяем, что соревнование относится к региону пользователя
-                if (!application.Competition || application.Competition.regionId !== user.idRegions) {
+                // Проверяем, что соревнование относится к региону пользователя, только если регион указан
+                if (user && user.idRegions && application.Competition && application.Competition.RegionId !== user.idRegions) {
                     console.log('Заявка не относится к региону пользователя');
                     return res.status(403).json({ message: 'Нет доступа к заявке' });
                 }
@@ -786,22 +782,35 @@ class ApplicationController {
             
             // Получаем регион пользователя
             const user = await User.findByPk(userId);
-            if (!user || !user.idRegions) {
-                return res.status(400).json({ message: 'У пользователя не задан регион' });
+            
+            // Убираем проверку на наличие idRegions
+            let regionId = null;
+            if (user && user.idRegions) {
+                regionId = user.idRegions;
+                console.log(`Получение заявок для региона ID: ${regionId}`);
+            } else {
+                console.log('У регионального представителя не указан регион, возвращаем все соревнования');
             }
             
-            const regionId = user.idRegions;
-            console.log(`Получение заявок для региона ID: ${regionId}`);
-            
-            // Получаем список соревнований в регионе
-            const competitions = await Competition.findAll({
-                where: { regionId },
-                attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'status'],
-                raw: true
-            });
+            // Получаем список соревнований, если регион указан - то только для этого региона
+            let competitions;
+            if (regionId) {
+                competitions = await Competition.findAll({
+                    where: { RegionId: regionId }, // используем RegionId вместо regionId
+                    attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'status'],
+                    raw: true
+                });
+                console.log(`Найдено ${competitions.length} соревнований в регионе ID: ${regionId}`);
+            } else {
+                // Если регион не указан, получаем все соревнования
+                competitions = await Competition.findAll({
+                    attributes: ['id', 'name', 'description', 'startDate', 'endDate', 'status'],
+                    raw: true
+                });
+                console.log(`Найдено ${competitions.length} соревнований (для всех регионов)`);
+            }
             
             const competitionIds = competitions.map(comp => comp.id);
-            console.log(`Найдено ${competitionIds.length} соревнований в регионе ID: ${regionId}`);
             
             if (competitionIds.length === 0) {
                 return res.status(200).json([]);
@@ -1025,7 +1034,7 @@ class ApplicationController {
                         status: competition.status || '',
                         startDate: competition.startDate,
                         endDate: competition.endDate,
-                        regionId: competition.regionId
+                        RegionId: competition.RegionId
                     };
                     console.log(`DEBUG: Соревнование загружено: ${competition.name}`);
                 } else {

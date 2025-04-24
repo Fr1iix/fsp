@@ -3,11 +3,13 @@ const { Op } = require('sequelize');
 const {Regions} = require("../models/models")
 
 class RegionsController{
-    getAll = (req, res, next) => {
+    getAll = async (req, res, next) => {
         try{
             let limit = parseInt(req.query.limit, 10) || 10;
             let offset = parseInt(req.query.offset, 10) || 0;
             const search = req.query.search || '';
+
+            console.log("Получен запрос на список регионов");
 
             const whereClause = search
                 ? {
@@ -17,14 +19,18 @@ class RegionsController{
             }
             : {};
 
-            const reg = Regions.findAll({
+            const regions = await Regions.findAll({
                 where: whereClause,
                 limit, offset
-            })
+            });
 
-            return res.status(200).json(reg)
+            console.log(`Найдено ${regions.length} регионов`);
+            console.log("Данные о регионах:", JSON.stringify(regions));
+
+            return res.status(200).json(regions);
         }catch (error){
-            next(ApiError.badRequest(e.message))
+            console.error("Ошибка при получении списка регионов:", error);
+            next(ApiError.badRequest(error.message));
         }        
     }
 
@@ -44,9 +50,16 @@ class RegionsController{
         }
     }
 
-    async deleteAdress(req,res){
-        const id = req.params.id
-        await Address.destroy({where: {id}})
+    async deleteRegion(req, res) {
+        const id = req.params.id;
+        console.log(`Запрос на удаление региона с ID: ${id}`);
+        try {
+            await Regions.destroy({where: {id}});
+            return res.status(200).json({message: "Регион успешно удален"});
+        } catch (error) {
+            console.error("Ошибка при удалении региона:", error);
+            return res.status(500).json({error: "Внутренняя ошибка сервера"});
+        }
     }
 
     async updateOne(req, res) {

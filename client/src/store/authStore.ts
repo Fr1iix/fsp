@@ -8,6 +8,7 @@ interface JwtPayload {
   id: string;
   email: string;
   role: UserRole;
+  region?: string | null;
   iat: number;
   exp: number;
 }
@@ -19,6 +20,7 @@ interface AuthStore extends AuthState {
   checkAuth: () => Promise<void>;
   loadUserInfo: (userId: string) => Promise<void>;
   updateUserInfo: (userId: string, userInfo: any) => Promise<void>;
+  updateUserRegion: (userId: string, regionId: number) => Promise<void>;
   userInfo: any | null;
   userInfoLoaded: boolean; // Флаг для отслеживания загрузки информации
 }
@@ -241,6 +243,65 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         error: axios.isAxiosError(error)
           ? error.response?.data?.message || 'Ошибка обновления профиля'
           : 'Ошибка обновления профиля',
+        isLoading: false
+      });
+    }
+  },
+
+  updateUserRegion: async (userId, regionId) => {
+    set({ isLoading: true });
+    try {
+      console.log(`Обновление региона пользователя ID=${userId} на регион ID=${regionId}`);
+      const result = await userAPI.updateRegion(userId, regionId);
+
+      // Если сервер вернул новый токен, обновляем информацию о пользователе
+      if (result.token) {
+        try {
+          // Декодируем новый токен
+          const decoded = jwtDecode<JwtPayload & { region?: string }>(result.token);
+          console.log('Декодированный токен с новым регионом:', decoded);
+
+          // Обновляем информацию о пользователе в сторе на основе нового токена
+          set(state => {
+            if (state.user) {
+              return {
+                user: {
+                  ...state.user,
+                  region: decoded.region || undefined,
+                },
+                isLoading: false,
+                error: null
+              };
+            }
+            return { ...state, isLoading: false };
+          });
+        } catch (decodeError) {
+          console.error('Ошибка при декодировании токена:', decodeError);
+        }
+      } else {
+        // Если токен не вернулся, просто обновляем регион в сторе
+        set(state => {
+          if (state.user) {
+            return {
+              user: {
+                ...state.user,
+                region: regionId.toString(),
+              },
+              isLoading: false,
+              error: null
+            };
+          }
+          return { ...state, isLoading: false };
+        });
+      }
+
+      console.log('Регион успешно обновлен в сторе');
+    } catch (error) {
+      console.error('Ошибка при обновлении региона:', error);
+      set({
+        error: axios.isAxiosError(error)
+          ? error.response?.data?.message || 'Ошибка обновления региона'
+          : 'Ошибка обновления региона',
         isLoading: false
       });
     }

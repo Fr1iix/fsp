@@ -10,6 +10,7 @@ import Badge from '../components/ui/Badge.tsx';
 import api from '../utils/api';
 import Invitations from '../components/Invitations';
 import TeamJoinRequests from '../components/TeamJoinRequests';
+import UserCompetitions from '../components/UserCompetitions';
 
 interface RegistrationWithCompetition extends CompetitionRegistration {
   competition: Competition;
@@ -372,25 +373,7 @@ const ProfilePage: React.FC = () => {
               </CardHeader>
 
               <CardContent className="p-6">
-                {isLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
-                  </div>
-                ) : (
-                  <div className="text-center py-10 text-neutral-500">
-                    <div className="bg-neutral-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Calendar className="h-12 w-12 text-neutral-300" />
-                    </div>
-                    <p className="text-lg font-medium mb-2 text-neutral-700">Вы не зарегистрированы на соревнования</p>
-                    <p className="text-sm max-w-md mx-auto mb-6">Найдите интересное соревнование и примите участие, чтобы проявить свои навыки!</p>
-                    <Button
-                      className="px-6 shadow-sm hover:shadow transition-all"
-                      onClick={() => navigate('/competitions')}
-                    >
-                      Найти соревнования
-                    </Button>
-                  </div>
-                )}
+                <UserCompetitions />
               </CardContent>
             </Card>
 

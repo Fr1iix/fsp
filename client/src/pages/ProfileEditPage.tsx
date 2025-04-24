@@ -5,7 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { User, Mail, Phone, Calendar, Github, Info, ArrowLeft } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Github, Info, ArrowLeft, MapPin } from 'lucide-react';
+import { analyticsAPI, userAPI } from '../utils/api';
 
 interface ProfileFormData {
 	firstName: string;
@@ -16,12 +17,21 @@ interface ProfileFormData {
 	phone: string;
 	github: string;
 	discription: string;
+	idRegions: number | null;
+}
+
+interface Region {
+	id: number;
+	name: string;
 }
 
 const ProfileEditPage: React.FC = () => {
 	const navigate = useNavigate();
 	const { user, userInfo, isLoading, error, updateUserInfo, loadUserInfo } = useAuthStore();
 	const [isSaving, setIsSaving] = useState(false);
+	const [loadingRegions, setLoadingRegions] = useState(false);
+	const [regions, setRegions] = useState<Region[]>([]);
+	const [selectedRegion, setSelectedRegion] = useState<number | null>(null);
 
 	const { register, handleSubmit, setValue, formState: { errors } } = useForm<ProfileFormData>({
 		defaultValues: {
@@ -32,9 +42,38 @@ const ProfileEditPage: React.FC = () => {
 			birthday: '',
 			phone: '',
 			github: '',
-			discription: ''
+			discription: '',
+			idRegions: null
 		}
 	});
+
+	useEffect(() => {
+		const fetchRegions = async () => {
+			if (user?.role === 'regional') {
+				try {
+					setLoadingRegions(true);
+					console.log('Загрузка списка регионов...');
+					const regionsData = await analyticsAPI.getRegions();
+					console.log('Получены регионы (сырые данные):', JSON.stringify(regionsData));
+					
+					if (Array.isArray(regionsData)) {
+						setRegions(regionsData);
+						console.log(`Загружено ${regionsData.length} регионов:`, regionsData);
+					} else {
+						console.error('Ожидался массив регионов, получено:', regionsData);
+						setRegions([]);
+					}
+				} catch (error) {
+					console.error('Ошибка при загрузке списка регионов:', error);
+					setRegions([]);
+				} finally {
+					setLoadingRegions(false);
+				}
+			}
+		};
+
+		fetchRegions();
+	}, [user?.role]);
 
 	useEffect(() => {
 		// Если пользователь не авторизован, перенаправляем на страницу входа
@@ -54,6 +93,20 @@ const ProfileEditPage: React.FC = () => {
 				setValue('phone', userInfo.phone || '');
 				setValue('github', userInfo.github || '');
 				setValue('discription', userInfo.discription || '');
+				
+				// Если пользователь региональный представитель, устанавливаем значение региона
+				if (user.role === 'regional' && user.region) {
+					// Преобразуем строковое значение региона в число, если оно существует
+					try {
+						const regionValue = user.region ? parseInt(user.region, 10) : null;
+						console.log('Устанавливаем значение региона:', regionValue, 'из строки:', user.region);
+						setValue('idRegions', regionValue);
+						setSelectedRegion(regionValue);
+					} catch (error) {
+						console.error('Ошибка при преобразовании ID региона:', error);
+						setValue('idRegions', null);
+					}
+				}
 			}
 		}
 	}, [user, userInfo, isLoading, navigate, setValue, loadUserInfo]);
@@ -62,13 +115,68 @@ const ProfileEditPage: React.FC = () => {
 		if (!user) return;
 
 		setIsSaving(true);
+		
 		try {
-			await updateUserInfo(user.id, data);
+			console.log('Отправка формы с данными:', data);
+			
+			// Определяем, какие данные отправлять на сервер
+			const updateData: any = { ...data };
+			
+			// Если пользователь региональный представитель, обрабатываем поле idRegions
+			if (user.role === 'regional') {
+				// Проверяем, выбран ли регион
+				if (data.idRegions) {
+					let regionId: number;
+					
+					// Корректно преобразуем значение в число
+					if (typeof data.idRegions === 'string') {
+						regionId = parseInt(data.idRegions, 10);
+					} else if (typeof data.idRegions === 'number') {
+						regionId = data.idRegions;
+					} else {
+						throw new Error('Неверный формат ID региона');
+					}
+					
+					console.log('Обновление региона пользователя на:', regionId);
+					console.log('Текущий регион пользователя:', user.region);
+					
+					try {
+						// Прямой вызов API для обновления региона
+						const regionUpdateResult = await userAPI.updateRegion(user.id, regionId);
+						console.log('Результат обновления региона:', regionUpdateResult);
+					} catch (error) {
+						console.error('Ошибка при обновлении региона:', error);
+						throw error;
+					}
+				} else {
+					console.log('Регион не выбран');
+				}
+				
+				// Удаляем поле idRegions из данных для обновления userInfo
+				delete updateData.idRegions;
+			}
+			
+			// Обновляем остальную информацию профиля
+			console.log('Обновление профиля пользователя с данными:', updateData);
+			await updateUserInfo(user.id, updateData);
+			
+			// После обновления перенаправляем пользователя на страницу профиля
+			console.log('Профиль успешно обновлен, перенаправление на профиль');
 			navigate('/profile');
 		} catch (error) {
 			console.error('Ошибка при обновлении профиля:', error);
 		} finally {
 			setIsSaving(false);
+		}
+	};
+
+	// Обработчик изменения выбранного региона
+	const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+		const value = e.target.value;
+		if (value) {
+			setSelectedRegion(parseInt(value, 10));
+		} else {
+			setSelectedRegion(null);
 		}
 	};
 
@@ -227,6 +335,51 @@ const ProfileEditPage: React.FC = () => {
 									Эта информация будет отображаться в вашем публичном профиле
 								</p>
 							</div>
+
+							{/* Поле выбора региона для пользователей с ролью "regional" */}
+							{user?.role === 'regional' && (
+								<div>
+									<label className="block text-sm font-medium text-neutral-700 mb-1.5 flex items-center">
+										<MapPin className="h-4 w-4 mr-1.5 text-neutral-500" />
+										Регион
+									</label>
+									<div className="relative h-[42px]">
+										<div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-neutral-500">
+											<MapPin className="h-4 w-4 text-neutral-500" />
+										</div>
+										<select
+											className="appearance-none w-full h-full pl-10 pr-10 py-2 border border-neutral-200 bg-neutral-50 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white transition-colors"
+											{...register('idRegions', {
+												setValueAs: value => value ? parseInt(value, 10) : null
+											})}
+											onChange={handleRegionChange}
+											value={selectedRegion || ''}
+										>
+											<option value="">Выберите регион</option>
+											{loadingRegions ? (
+												<option disabled>Загрузка регионов...</option>
+											) : (
+												regions.map((region: Region) => (
+													<option 
+														key={region.id} 
+														value={region.id}
+													>
+														{region.name}
+													</option>
+												))
+											)}
+										</select>
+										<div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-neutral-500">
+											<svg className="h-4 w-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+												<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+											</svg>
+										</div>
+									</div>
+									{errors.idRegions && (
+										<p className="text-error-500 text-xs mt-1">{errors.idRegions.message}</p>
+									)}
+								</div>
+							)}
 						</CardContent>
 
 						<CardFooter className="flex justify-between border-t border-neutral-100 p-6 bg-neutral-50">

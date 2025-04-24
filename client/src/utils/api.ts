@@ -67,6 +67,30 @@ export const userAPI = {
 	updateUserInfo: async (userId: string, userInfo: any) => {
 		const { data } = await $api.put(`/userInfo/updateUserInfo/${userId}`, userInfo);
 		return data;
+	},
+
+	// Обновление региона пользователя
+	updateRegion: async (userId: string, regionId: number) => {
+		console.log(`API: Обновление региона пользователя ID=${userId} на регион ID=${regionId}`);
+		try {
+			const { data } = await $api.put(`/user/updateRegion/${userId}`, { idRegions: regionId });
+			console.log('Ответ сервера:', data);
+			
+			// Если сервер вернул новый токен, сохраняем его
+			if (data.token) {
+				console.log('Сохраняем новый токен с обновленным регионом');
+				localStorage.setItem('token', data.token);
+			}
+			
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при обновлении региона:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
 	}
 };
 

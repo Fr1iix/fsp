@@ -3,9 +3,10 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { User, UserInfo } = require('../models/models')
 
-const generateJwt = (id, email, role) => {
+const generateJwt = (id, email, role, idRegions = null) => {
+    console.log(`Генерация JWT токена: id=${id}, email=${email}, role=${role}, idRegions=${idRegions}`);
     return jwt.sign(
-        { id, email, role },
+        { id, email, role, region: idRegions ? idRegions.toString() : null },
         process.env.SECRET_KEY,
         { expiresIn: '24h' }
     )
@@ -97,8 +98,16 @@ class UserController {
 
     async check(req, res, next) {
         try {
-            const token = generateJwt(req.user.id, req.user.email, req.user.role)
-            return res.json({ token })
+            // Получаем актуальные данные пользователя из БД
+            const user = await User.findByPk(req.user.id);
+            
+            if (!user) {
+                return next(ApiError.unauthorized('Пользователь не найден'));
+            }
+            
+            // Генерируем токен с актуальными данными, включая регион
+            const token = generateJwt(user.id, user.email, user.role, user.idRegions);
+            return res.json({ token });
         } catch (error) {
             console.error('Ошибка при проверке токена:', error);
             return next(ApiError.internal('Ошибка при проверке токена'));
@@ -125,6 +134,43 @@ class UserController {
         } catch (error) {
             console.error('Ошибка при проверке email:', error);
             return next(ApiError.internal('Ошибка при проверке email'))
+        }
+    }
+
+    async updateRegion(req, res, next) {
+        try {
+            const userId = req.params.id;
+            const { idRegions } = req.body;
+            
+            console.log(`Запрос на обновление региона пользователя ID=${userId} на регион ID=${idRegions}`);
+            
+            // Проверяем, существует ли пользователь
+            const user = await User.findByPk(userId);
+            if (!user) {
+                return next(ApiError.badRequest('Пользователь не найден'));
+            }
+            
+            // Проверяем права доступа: только владелец аккаунта или админ может обновлять регион
+            if (req.user.id != userId && req.user.role !== 'admin') {
+                return next(ApiError.forbidden('У вас нет прав на изменение этого пользователя'));
+            }
+            
+            // Обновляем регион пользователя
+            await user.update({ idRegions });
+            
+            console.log(`Регион успешно обновлен для пользователя ID=${userId}`);
+            
+            // Генерируем новый токен с обновленными данными
+            const token = generateJwt(user.id, user.email, user.role, idRegions);
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Регион пользователя успешно обновлен',
+                token
+            });
+        } catch (error) {
+            console.error('Ошибка при обновлении региона пользователя:', error);
+            return next(ApiError.internal('Ошибка при обновлении региона пользователя: ' + error.message));
         }
     }
 }
