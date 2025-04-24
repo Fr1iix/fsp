@@ -52,11 +52,6 @@ const Header: React.FC = () => {
             <Link to="/about" className="text-sm text-neutral-700 hover:text-primary-600">
               О нас
             </Link>
-            {hasAnalyticsAccess && (
-              <Link to="/analytics" className="text-sm text-neutral-700 hover:text-primary-600">
-                Аналитика
-              </Link>
-            )}
           </nav>
 
           {/* Правая часть - Desktop */}
