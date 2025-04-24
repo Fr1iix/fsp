@@ -159,6 +159,7 @@ const AnalyticsPage: React.FC = () => {
 
   // Экспорт данных
   const exportData = async () => {
+    setError(null);
     try {
       const params: any = {
         type: activeTab
@@ -169,7 +170,29 @@ const AnalyticsPage: React.FC = () => {
       if (filters.endDate) params.endDate = filters.endDate;
       if (filters.status) params.status = filters.status;
 
+      console.log('Экспорт данных с параметрами:', params);
+      
       const blob = await analyticsAPI.exportData(params);
+      
+      // Проверка, что полученные данные действительно являются Blob
+      if (!(blob instanceof Blob)) {
+        console.error('Полученные данные не являются Blob:', blob);
+        throw new Error('Неверный формат данных для скачивания');
+      }
+      
+      console.log('Получен Blob размером:', blob.size, 'bytes, тип:', blob.type);
+      
+      // Если размер Blob слишком мал, возможно это сообщение об ошибке
+      if (blob.size < 100 && blob.type.includes('json')) {
+        const text = await blob.text();
+        console.error('Возможная ошибка в Blob:', text);
+        try {
+          const error = JSON.parse(text);
+          throw new Error(error.message || 'Ошибка при экспорте данных');
+        } catch (e) {
+          throw new Error(`Ошибка при экспорте данных: ${text}`);
+        }
+      }
       
       // Создаем ссылку для скачивания файла
       const url = window.URL.createObjectURL(blob);
@@ -180,9 +203,9 @@ const AnalyticsPage: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка при экспорте данных:', error);
-      setError('Не удалось экспортировать данные');
+      setError(error.message || 'Не удалось экспортировать данные');
     }
   };
 

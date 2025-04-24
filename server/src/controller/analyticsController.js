@@ -27,6 +27,8 @@ class AnalyticsController {
                 whereClause.status = status;
             }
 
+            console.log('Запрос соревнований с фильтрами:', whereClause);
+
             const competitions = await Competition.findAll({
                 where: whereClause,
                 include: [
@@ -37,28 +39,103 @@ class AnalyticsController {
                 ]
             });
 
+            console.log(`Найдено соревнований: ${competitions.length}`);
+            
+            // Проверяем данные первого соревнования для отладки
+            if (competitions.length > 0) {
+                const firstComp = competitions[0];
+                console.log('Первое соревнование:', {
+                    id: firstComp.id,
+                    name: firstComp.name,
+                    disciplineId: firstComp.disciplineId,
+                    disciplineName: firstComp.Discipline?.name,
+                    regionId: firstComp.regionId,
+                    status: firstComp.status
+                });
+                console.log('Свойства соревнования:', Object.keys(firstComp.dataValues));
+                
+                // Проверяем, правильно ли загружается дисциплина
+                if (firstComp.Discipline) {
+                    console.log('Свойства дисциплины:', Object.keys(firstComp.Discipline.dataValues));
+                } else {
+                    console.log('Дисциплина не загружена для соревнования');
+                }
+            }
+
             // Получаем регионы отдельно, чтобы связать с соревнованиями
             const regions = await Regions.findAll({
                 attributes: ['id', 'name']
             });
 
+            console.log(`Найдено регионов: ${regions.length}`);
+            
             // Создаем карту регионов для быстрого доступа
             const regionsMap = {};
             regions.forEach(region => {
                 regionsMap[region.id] = region.name;
             });
 
-            // Форматируем данные для отображения на фронтенде
-            const formattedCompetitions = competitions.map(comp => ({
-                id: comp.id,
-                name: comp.name,
-                discipline: comp.Discipline?.name || 'Нет данных',
-                region: comp.regionId ? regionsMap[comp.regionId] || 'Нет данных' : 'Нет данных',
-                startdate: comp.startdate,
-                status: comp.status || 'Нет данных'
-            }));
+            // Проверим несколько регионов для отладки
+            console.log('Карта регионов (первые 3):', 
+                Object.entries(regionsMap).slice(0, 3).map(([id, name]) => `${id}: ${name}`));
 
-            console.log(`Найдено соревнований: ${formattedCompetitions.length}`);
+            // Получаем все дисциплины
+            const disciplines = await Discipline.findAll({
+                attributes: ['id', 'name']
+            });
+
+            console.log(`Найдено дисциплин: ${disciplines.length}`);
+            
+            // Создаем карту дисциплин для быстрого доступа
+            const disciplinesMap = {};
+            disciplines.forEach(discipline => {
+                disciplinesMap[discipline.id] = discipline.name;
+            });
+
+            // Проверим несколько дисциплин для отладки
+            console.log('Карта дисциплин (первые 3):', 
+                Object.entries(disciplinesMap).slice(0, 3).map(([id, name]) => `${id}: ${name}`));
+
+            // Форматируем данные для отображения на фронтенде
+            const formattedCompetitions = competitions.map(comp => {
+                // Приоритетно используем данные из включенной модели Discipline
+                let disciplineName = comp.Discipline?.name;
+                
+                // Если не удалось получить из связи, используем карту дисциплин
+                if (!disciplineName && comp.disciplineId && disciplinesMap[comp.disciplineId]) {
+                    disciplineName = disciplinesMap[comp.disciplineId];
+                }
+                
+                // Если дисциплина все еще не найдена, используем поле 'type' как запасной вариант
+                if (!disciplineName && comp.type) {
+                    // Карта соответствия типов и названий дисциплин
+                    const typeToName = {
+                        'product': 'Продуктовое программирование',
+                        'security': 'Программирование систем информационной безопасности',
+                        'algorithm': 'Алгоритмическое программирование',
+                        'robotics': 'Программирование робототехники',
+                        'drones': 'Программирование беспилотных авиационных систем'
+                    };
+                    
+                    disciplineName = typeToName[comp.type] || comp.type;
+                }
+                
+                return {
+                    id: comp.id,
+                    name: comp.name,
+                    discipline: disciplineName || 'Нет данных',
+                    region: comp.regionId && regionsMap[comp.regionId] ? regionsMap[comp.regionId] : 'Нет данных',
+                    startdate: comp.startdate,
+                    status: comp.status || 'Нет данных'
+                };
+            });
+
+            console.log(`Отформатировано соревнований: ${formattedCompetitions.length}`);
+            
+            // Если есть соревнования, проверим первое соревнование после форматирования
+            if (formattedCompetitions.length > 0) {
+                console.log('Первое отформатированное соревнование:', formattedCompetitions[0]);
+            }
             
             return res.json(formattedCompetitions);
         } catch (e) {
@@ -160,7 +237,7 @@ class AnalyticsController {
                 
                 // Отладочная информация
                 console.log(`Спортсмен ID=${athlete.id}, регион: ${regionName || 'null'}, ` +
-                            `всего заявок: ${applications.length}, ` +
+                            `всего заявок: ${applications.length}, ` + 
                             `принятых заявок: ${approvedApplications.length}, ` +
                             `статусы заявок: ${applications.map(app => app.status).join(', ')}`);
                 
@@ -184,12 +261,143 @@ class AnalyticsController {
         try {
             const { type, ...filters } = req.query;
             
+            console.log(`Запрос на экспорт данных типа: ${type}, с фильтрами:`, filters);
+            
             let data;
             if (type === 'competitions') {
-                data = await this.getCompetitionsData(filters);
+                // Создаем whereClause прямо здесь, вместо вызова buildCompetitionFilters
+                const whereClause = {};
+                
+                if (filters.disciplineId) whereClause.disciplineId = filters.disciplineId;
+                if (filters.regionId) whereClause.regionId = filters.regionId;
+                if (filters.status) whereClause.status = filters.status;
+                
+                if (filters.startDate && filters.endDate) {
+                    whereClause.startdate = {
+                        [Op.between]: [new Date(filters.startDate), new Date(filters.endDate)]
+                    };
+                }
+
+                // Встраиваем логику getCompetitionsData прямо здесь
+                const competitions = await Competition.findAll({
+                    where: whereClause,
+                    include: [
+                        { model: Discipline, attributes: ['name'] }
+                    ]
+                });
+
+                // Получаем регионы отдельно
+                const regions = await Regions.findAll({
+                    attributes: ['id', 'name']
+                });
+
+                // Создаем карту регионов для быстрого доступа
+                const regionsMap = {};
+                regions.forEach(region => {
+                    regionsMap[region.id] = region.name;
+                });
+
+                // Получаем все дисциплины
+                const disciplines = await Discipline.findAll({
+                    attributes: ['id', 'name']
+                });
+                
+                // Создаем карту дисциплин для быстрого доступа
+                const disciplinesMap = {};
+                disciplines.forEach(discipline => {
+                    disciplinesMap[discipline.id] = discipline.name;
+                });
+
+                data = competitions.map(comp => {
+                    // Приоритетно используем данные из включенной модели Discipline
+                    let disciplineName = comp.Discipline?.name;
+                    
+                    // Если не удалось получить из связи, используем карту дисциплин
+                    if (!disciplineName && comp.disciplineId && disciplinesMap[comp.disciplineId]) {
+                        disciplineName = disciplinesMap[comp.disciplineId];
+                    }
+                    
+                    // Если дисциплина все еще не найдена, используем поле 'type' как запасной вариант
+                    if (!disciplineName && comp.type) {
+                        // Карта соответствия типов и названий дисциплин
+                        const typeToName = {
+                            'product': 'Продуктовое программирование',
+                            'security': 'Программирование систем информационной безопасности',
+                            'algorithm': 'Алгоритмическое программирование',
+                            'robotics': 'Программирование робототехники',
+                            'drones': 'Программирование беспилотных авиационных систем'
+                        };
+                        
+                        disciplineName = typeToName[comp.type] || comp.type;
+                    }
+                    
+                    return {
+                        name: comp.name,
+                        discipline: disciplineName || 'Нет данных',
+                        region: comp.regionId && regionsMap[comp.regionId] ? regionsMap[comp.regionId] : 'Нет данных',
+                        startDate: comp.startdate,
+                        status: comp.status || 'Нет данных'
+                    };
+                });
+
+                console.log(`Получено ${data.length} записей для экспорта соревнований`);
+                if (data.length > 0) {
+                    console.log('Пример данных:', data[0]);
+                }
             } else if (type === 'athletes') {
-                data = await this.getAthletesData(filters);
+                // Создаем whereClause прямо здесь, вместо вызова buildAthleteFilters
+                const whereClause = {};
+                
+                if (filters.regionId) whereClause.idRegions = filters.regionId;
+                
+                // Встраиваем логику getAthletesData прямо здесь
+                const athletes = await User.findAll({
+                    where: { ...whereClause, role: 'athlete' },
+                    include: [
+                        { model: UserInfo, as: 'user_info' },
+                        { model: Regions, attributes: ['name'], required: false },
+                        { 
+                            model: Application, 
+                            include: [{ 
+                                model: Competition,
+                                where: filters.disciplineId ? { disciplineId: filters.disciplineId } : {},
+                                required: false 
+                            }],
+                            required: false 
+                        },
+                        {
+                            model: require('../models/models').Results,
+                            required: false
+                        }
+                    ]
+                });
+
+                data = athletes.map(athlete => {
+                    // Пытаемся определить заявки из разных возможных имен связей
+                    const applications = athlete.applications || athlete.Applications || [];
+                    
+                    // Считаем только принятые заявки
+                    const approvedApplications = applications.filter(app => app.status === 'approved');
+                    
+                    // Определяем регион из разных возможных имен связей
+                    const regionName = athlete.region?.name || athlete.Region?.name;
+                    
+                    // Используем количество принятых заявок как количество соревнований
+                    const competitionsCount = approvedApplications.length || 0;
+                    
+                    return {
+                        fullName: `${athlete.user_info?.lastName || ''} ${athlete.user_info?.firstName || ''} ${athlete.user_info?.middleName || ''}`.trim(),
+                        region: regionName || 'Нет данных',
+                        competitionsCount: competitionsCount
+                    };
+                });
+
+                console.log(`Получено ${data.length} записей для экспорта спортсменов`);
+                if (data.length > 0) {
+                    console.log('Пример данных:', data[0]);
+                }
             } else {
+                console.log(`Неверный тип данных для экспорта: ${type}`);
                 return res.status(400).json({ message: "Неверный тип данных для экспорта" });
             }
 
@@ -205,22 +413,61 @@ class AnalyticsController {
                     { header: 'Дата начала', key: 'startDate' },
                     { header: 'Статус', key: 'status' }
                 ];
+                
+                // Проверка соответствия ключей в данных и колонках
+                console.log('Ключи в колонках:', worksheet.columns.map(col => col.key));
+                if (data.length > 0) {
+                    console.log('Ключи в данных:', Object.keys(data[0]));
+                }
             } else {
                 worksheet.columns = [
                     { header: 'ФИО', key: 'fullName' },
                     { header: 'Регион', key: 'region' },
                     { header: 'Количество соревнований', key: 'competitionsCount' }
                 ];
+                
+                // Проверка соответствия ключей в данных и колонках
+                console.log('Ключи в колонках:', worksheet.columns.map(col => col.key));
+                if (data.length > 0) {
+                    console.log('Ключи в данных:', Object.keys(data[0]));
+                }
             }
 
-            worksheet.addRows(data);
+            // Форматирование дат в Excel
+            if (type === 'competitions') {
+                data = data.map(item => ({
+                    ...item,
+                    startDate: item.startDate instanceof Date ? item.startDate : new Date(item.startDate)
+                }));
+            }
 
+            try {
+                worksheet.addRows(data);
+                console.log('Строки успешно добавлены в таблицу');
+            } catch (error) {
+                console.error('Ошибка при добавлении строк в таблицу:', error);
+                // Выводим дополнительную информацию для отладки
+                console.log('Количество строк данных:', data.length);
+                if (data.length > 0) {
+                    console.log('Первая строка данных:', JSON.stringify(data[0]));
+                }
+                throw error; // Выбрасываем ошибку дальше
+            }
+
+            // Устанавливаем заголовки для правильного отображения файла
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             res.setHeader('Content-Disposition', `attachment; filename=${type}_analytics.xlsx`);
 
-            await workbook.xlsx.write(res);
-            res.end();
+            try {
+                await workbook.xlsx.write(res);
+                console.log('Excel-файл успешно записан в ответ');
+                res.end();
+            } catch (error) {
+                console.error('Ошибка при записи Excel-файла в ответ:', error);
+                throw error; // Выбрасываем ошибку дальше
+            }
         } catch (e) {
+            console.error("Ошибка при экспорте данных:", e);
             return res.status(500).json({ message: "Ошибка при экспорте данных" });
         }
     }
@@ -244,13 +491,48 @@ class AnalyticsController {
             regionsMap[region.id] = region.name;
         });
 
-        return competitions.map(comp => ({
-            name: comp.name,
-            discipline: comp.Discipline?.name || 'Нет данных',
-            region: comp.regionId ? regionsMap[comp.regionId] || 'Нет данных' : 'Нет данных',
-            startDate: comp.startdate,
-            status: comp.status || 'Нет данных'
-        }));
+        // Получаем все дисциплины
+        const disciplines = await Discipline.findAll({
+            attributes: ['id', 'name']
+        });
+        
+        // Создаем карту дисциплин для быстрого доступа
+        const disciplinesMap = {};
+        disciplines.forEach(discipline => {
+            disciplinesMap[discipline.id] = discipline.name;
+        });
+
+        return competitions.map(comp => {
+            // Приоритетно используем данные из включенной модели Discipline
+            let disciplineName = comp.Discipline?.name;
+            
+            // Если не удалось получить из связи, используем карту дисциплин
+            if (!disciplineName && comp.disciplineId && disciplinesMap[comp.disciplineId]) {
+                disciplineName = disciplinesMap[comp.disciplineId];
+            }
+            
+            // Если дисциплина все еще не найдена, используем поле 'type' как запасной вариант
+            if (!disciplineName && comp.type) {
+                // Карта соответствия типов и названий дисциплин
+                const typeToName = {
+                    'product': 'Продуктовое программирование',
+                    'security': 'Программирование систем информационной безопасности',
+                    'algorithm': 'Алгоритмическое программирование',
+                    'robotics': 'Программирование робототехники',
+                    'drones': 'Программирование беспилотных авиационных систем'
+                };
+                
+                disciplineName = typeToName[comp.type] || comp.type;
+            }
+            
+            return {
+                name: comp.name,
+                discipline: disciplineName || 'Нет данных',
+                region: comp.regionId && regionsMap[comp.regionId] ? regionsMap[comp.regionId] : 'Нет данных',
+                startDate: comp.startdate,
+                status: comp.status || 'Нет данных'
+            };
+        });
     }
 
     async getAthletesData(filters) {

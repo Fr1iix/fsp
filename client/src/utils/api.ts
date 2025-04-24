@@ -393,11 +393,37 @@ export const analyticsAPI = {
 		endDate?: string;
 		status?: string
 	}) => {
-		const { data } = await $api.get('/analytics/export', {
-			params,
-			responseType: 'blob'
-		});
-		return data;
+		console.log('Запрос на экспорт данных:', params);
+		try {
+			const response = await $api.get('/analytics/export', {
+				params,
+				responseType: 'blob'
+			});
+			
+			console.log('Получен ответ с типом:', response.headers['content-type']);
+			console.log('Размер данных:', response.data.size);
+			
+			// Проверяем правильность типа данных ответа
+			if (response.data instanceof Blob) {
+				return response.data;
+			} else {
+				console.error('Получен неверный формат данных:', typeof response.data);
+				throw new Error('Получен неверный формат данных от сервера');
+			}
+		} catch (error: any) {
+			console.error('Ошибка при экспорте данных:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				if (error.response.data instanceof Blob) {
+					// Если сервер вернул ошибку как Blob, нужно его прочитать как текст
+					const text = await new Response(error.response.data).text();
+					console.error('Данные ошибки:', text);
+				} else {
+					console.error('Данные ошибки:', error.response.data);
+				}
+			}
+			throw error;
+		}
 	},
 
 	// Получение списка дисциплин
