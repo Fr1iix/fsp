@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/hackathonsrus/PP_prostoteam_65/issues"
   },
-  "homepage": "https://github.com/hackathonsrus/PP_prostoteam_65#readme"
+  "homepage": "https://github.com/hackathonsrus/PP_prostoteam_65#readme",
+  "dependencies": {
+    "framer-motion": "^12.9.0"
+  }
 }

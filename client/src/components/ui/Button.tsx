@@ -12,17 +12,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ 
-    children, 
-    variant = 'primary', 
-    size = 'md', 
-    isLoading = false, 
-    leftIcon, 
-    rightIcon, 
-    className, 
+  ({
+    children,
+    variant = 'primary',
+    size = 'md',
+    isLoading = false,
+    leftIcon,
+    rightIcon,
+    className,
     fullWidth = false,
     disabled,
-    ...props 
+    ...props
   }, ref) => {
     const sizeClasses = {
       sm: 'h-8 px-3 text-xs',
