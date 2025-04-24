@@ -38,6 +38,9 @@ const Team = sequelize.define('team', {
     points: { type: DataTypes.INTEGER },
     result: { type: DataTypes.INTEGER },
     teammembersId: { type: DataTypes.INTEGER, foreignKey: true },
+    lookingForMembers: { type: DataTypes.BOOLEAN, defaultValue: false },
+    availableSlots: { type: DataTypes.INTEGER, defaultValue: 0 },
+    requiredRoles: { type: DataTypes.STRING, defaultValue: "" },
 })
 
 const Competition = sequelize.define('competition', {

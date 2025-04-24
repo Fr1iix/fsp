@@ -216,13 +216,13 @@ export const applicationAPI = {
 export const teamsAPI = {
 	// Получение списка команд
 	getAll: async () => {
-		const { data } = await $api.get('/teams');
+		const { data } = await $api.get('/teams/getTeam');
 		return data;
 	},
 
 	// Получение конкретной команды
 	getOne: async (id: string) => {
-		const { data } = await $api.get(`/teams/${id}`);
+		const { data } = await $api.get(`/teams/getTeam/${id}`);
 		return data;
 	},
 
@@ -231,6 +231,9 @@ export const teamsAPI = {
 		name: string;
 		discription?: string;
 		CompetitionId: string;
+		lookingForMembers?: boolean;
+		availableSlots?: number;
+		requiredRoles?: string;
 	}) => {
 		console.log('Отправка запроса на создание команды:', teamData);
 		try {
@@ -238,6 +241,46 @@ export const teamsAPI = {
 			return data;
 		} catch (error: any) {
 			console.error('Ошибка при создании команды:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
+	},
+
+	// Обновление команды
+	update: async (id: string, teamData: {
+		name?: string;
+		discription?: string;
+		CompetitionId?: string;
+		lookingForMembers?: boolean;
+		availableSlots?: number;
+		requiredRoles?: string;
+	}) => {
+		console.log(`Отправка запроса на обновление команды ID ${id}:`, teamData);
+		try {
+			const { data } = await $api.put(`/teams/updateTeam/${id}`, teamData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при обновлении команды:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
+	},
+
+	// Поиск команд, которые ищут участников
+	getTeamsLookingForMembers: async (competitionId?: string) => {
+		console.log('Поиск команд, которые ищут участников', competitionId ? `для соревнования ${competitionId}` : '');
+		try {
+			const params = competitionId ? { competitionId } : {};
+			const { data } = await $api.get('/teams/lookingForMembers', { params });
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при поиске команд, которые ищут участников:', error);
 			if (error.response) {
 				console.error('Ответ сервера:', error.response.data);
 				console.error('Статус:', error.response.status);

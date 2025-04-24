@@ -92,14 +92,17 @@ class TeamController {
 
     async create(req, res, next) {
         try {
-            let { CompetitionId, name, discription, points, result, teammembersId} = req.body
+            let { CompetitionId, name, discription, points, result, teammembersId, lookingForMembers, availableSlots, requiredRoles } = req.body
             
             console.log('Создание команды с параметрами:', {
                 CompetitionId, 
                 name, 
                 discription, 
                 points, 
-                result
+                result,
+                lookingForMembers,
+                availableSlots,
+                requiredRoles
             });
             
             // Проверяем наличие обязательных полей
@@ -107,19 +110,25 @@ class TeamController {
                 return res.status(400).json({ message: 'Название команды обязательно' });
             }
             
+            // Создаем команду с новыми полями
             const team = await Team.create({
                 CompetitionId, 
                 name, 
                 discription: discription || '', 
                 points: points || 0, 
                 result: result || 0, 
-                teammembersId
+                teammembersId,
+                lookingForMembers: lookingForMembers || false,
+                availableSlots: availableSlots || 0,
+                requiredRoles: requiredRoles || ''
             });
             
             console.log('Создана команда:', {
                 id: team.id,
                 name: team.name,
-                CompetitionId: team.CompetitionId
+                CompetitionId: team.CompetitionId,
+                lookingForMembers: team.lookingForMembers,
+                availableSlots: team.availableSlots
             });
             
             return res.status(200).json(team)
@@ -137,9 +146,9 @@ class TeamController {
     async updateOne(req, res) {
         const {id} = req.params;
         const {
-            CompetitionId, name, discription, points, result, teammembersId
+            CompetitionId, name, discription, points, result, teammembersId,
+            lookingForMembers, availableSlots, requiredRoles
         } = req.body;
-
 
         try {
             const team = await Team.findOne({where: {id}});
@@ -154,6 +163,19 @@ class TeamController {
             team.points = points;
             team.result = result;
             team.teammembersId = teammembersId;
+            
+            // Обновляем новые поля
+            if (lookingForMembers !== undefined) {
+                team.lookingForMembers = lookingForMembers;
+            }
+            
+            if (availableSlots !== undefined) {
+                team.availableSlots = availableSlots;
+            }
+            
+            if (requiredRoles !== undefined) {
+                team.requiredRoles = requiredRoles;
+            }
 
             await team.save();
 
@@ -161,6 +183,58 @@ class TeamController {
         } catch (error) {
             console.error(error);
             return res.status(500).json({error: 'Internal server error'});
+        }
+    }
+
+    // Метод для поиска команд, которые ищут участников
+    async getTeamsLookingForMembers(req, res, next) {
+        try {
+            const competitionId = req.query.competitionId;
+            let whereClause = {
+                lookingForMembers: true,
+                availableSlots: {
+                    [Op.gt]: 0 // Больше нуля свободных мест
+                }
+            };
+            
+            // Если указан ID соревнования, добавляем его в условие
+            if (competitionId) {
+                whereClause.CompetitionId = competitionId;
+            }
+            
+            console.log('Поиск команд, которые ищут участников:', whereClause);
+            
+            // Загружаем команды с полной информацией
+            const teams = await Team.findAll({
+                where: whereClause,
+                include: [
+                    {
+                        model: Competition,
+                        attributes: ['id', 'name', 'discription', 'status']
+                    },
+                    {
+                        model: Teammembers,
+                        include: [
+                            {
+                                model: User,
+                                attributes: ['id', 'email'],
+                                include: [{
+                                    model: require('../models/models').UserInfo,
+                                    as: 'user_info',
+                                    attributes: ['firstName', 'lastName', 'middleName', 'phone']
+                                }]
+                            }
+                        ]
+                    }
+                ]
+            });
+            
+            console.log(`Найдено ${teams.length} команд, которые ищут участников`);
+            
+            return res.status(200).json(teams);
+        } catch (error) {
+            console.error('Ошибка при поиске команд, которые ищут участников:', error);
+            next(ApiError.badRequest(error.message));
         }
     }
 }

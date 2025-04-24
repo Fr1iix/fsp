@@ -70,6 +70,11 @@ const CompetitionParticipateForm: React.FC = () => {
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [teamCreationSuccess, setTeamCreationSuccess] = useState(false);
   const [teamCreationError, setTeamCreationError] = useState<string | null>(null);
+  
+  // Новые состояния для поиска участников
+  const [lookingForMembers, setLookingForMembers] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState(0);
+  const [requiredRoles, setRequiredRoles] = useState('');
 
   // Загрузка данных о соревновании
   useEffect(() => {
@@ -151,7 +156,10 @@ const CompetitionParticipateForm: React.FC = () => {
         CompetitionId: competitionId ?? '',
         points: 0,
         result: 0,
-        teammembersId: null
+        teammembersId: null,
+        lookingForMembers: lookingForMembers,
+        availableSlots: lookingForMembers ? availableSlots : 0,
+        requiredRoles: lookingForMembers ? requiredRoles : ''
       };
       
       console.log('Отправка запроса на создание команды:', teamData);
@@ -351,6 +359,56 @@ const CompetitionParticipateForm: React.FC = () => {
                   className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   rows={3}
                 />
+              </div>
+              
+              {/* Новая секция: Поиск участников */}
+              <div className="mb-6 border rounded-lg p-4 bg-blue-50 border-blue-100">
+                <div className="flex items-center mb-4">
+                  <input
+                    type="checkbox"
+                    id="lookingForMembers"
+                    checked={lookingForMembers}
+                    onChange={(e) => setLookingForMembers(e.target.checked)}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-neutral-300 rounded"
+                  />
+                  <label htmlFor="lookingForMembers" className="ml-2 block text-sm font-medium text-neutral-700">
+                    Требуются спортсмены
+                  </label>
+                </div>
+                
+                {lookingForMembers && (
+                  <>
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">
+                        Количество свободных мест
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={availableSlots}
+                        onChange={(e) => setAvailableSlots(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-neutral-700 mb-1">
+                        Требуемые роли / специализации
+                      </label>
+                      <textarea
+                        value={requiredRoles}
+                        onChange={(e) => setRequiredRoles(e.target.value)}
+                        placeholder="Например: разработчик бэкенда, дизайнер интерфейса, тестировщик и т.д."
+                        className="w-full px-3 py-2 border border-neutral-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        rows={2}
+                      />
+                      <p className="text-xs text-neutral-500 mt-1">
+                        Укажите, какие специалисты вам нужны. Эта информация будет отображаться в списке команд, ищущих участников.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               
               <div className="mb-6">

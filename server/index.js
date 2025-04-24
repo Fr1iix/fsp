@@ -29,6 +29,54 @@ const start = async () => {
         await sequelize.authenticate()
         console.log('Успешное подключение к базе данных')
 
+        // Добавляем отсутствующие столбцы в таблицу teams
+        try {
+            console.log('Выполняем миграцию для таблицы teams...')
+            
+            // Проверяем существование столбца lookingForMembers
+            const [lookingForMembersResults] = await sequelize.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'teams' 
+                AND column_name = 'lookingForMembers'
+            `);
+            
+            if (lookingForMembersResults.length === 0) {
+                console.log('Добавляем столбец lookingForMembers...');
+                await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "lookingForMembers" BOOLEAN DEFAULT false`);
+            }
+            
+            // Проверяем существование столбца availableSlots
+            const [availableSlotsResults] = await sequelize.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'teams' 
+                AND column_name = 'availableSlots'
+            `);
+            
+            if (availableSlotsResults.length === 0) {
+                console.log('Добавляем столбец availableSlots...');
+                await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "availableSlots" INTEGER DEFAULT 0`);
+            }
+            
+            // Проверяем существование столбца requiredRoles
+            const [requiredRolesResults] = await sequelize.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'teams' 
+                AND column_name = 'requiredRoles'
+            `);
+            
+            if (requiredRolesResults.length === 0) {
+                console.log('Добавляем столбец requiredRoles...');
+                await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "requiredRoles" TEXT DEFAULT ''`);
+            }
+            
+            console.log('Миграция завершена успешно');
+        } catch (migrationError) {
+            console.error('Ошибка при выполнении миграции:', migrationError);
+        }
+
         await sequelize.sync()
         console.log('Модели синхронизированы с базой данных')
 
