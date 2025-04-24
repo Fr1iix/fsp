@@ -17,6 +17,7 @@ const RegionsRouter = require('./RegionsRouter')
 const analyticsRouter = require('./analyticsRouter')
 const CompetitionResultRouter = require('./CompetitionResultRouter')
 const InvitationRouter = require('./InvitationRouter')
+const MigrationRouter = require('./MigrationRouter')
 
 router.use('/auth', authRouter)
 router.use('/user', userRouter)
@@ -35,5 +36,6 @@ router.use('/projects', ProjectsRouter)
 router.use('/regions', RegionsRouter)
 router.use('/competition-results', CompetitionResultRouter)
 router.use('/invitations', InvitationRouter)
+router.use('/migration', MigrationRouter)
 
 module.exports = router

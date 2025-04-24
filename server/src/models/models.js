@@ -130,6 +130,7 @@ const Invitation = sequelize.define("invitation", {
     InvitedBy: { type: DataTypes.INTEGER, foreignKey: true },
     status: { type: DataTypes.STRING, defaultValue: 'pending' },
     CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+    type: { type: DataTypes.STRING, defaultValue: 'invitation' },
 })
 
 User.hasOne(UserInfo, {
@@ -140,28 +141,36 @@ User.hasOne(UserInfo, {
 UserInfo.belongsTo(User)
 
 User.hasOne(Results, {
-    foreignKey: 'userId',
+    foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-Results.belongsTo(User)
+Results.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 User.hasOne(CompetitionAdmins, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-CompetitionAdmins.belongsTo(User)
+CompetitionAdmins.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 Competition.hasOne(CompetitionAdmins, {
-    foreignKey: 'UserId',
+    foreignKey: 'CompetitionId',
     onDelete: 'CASCADE'
 })
-CompetitionAdmins.belongsTo(Competition)
+CompetitionAdmins.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 Adress.hasOne(Competition, {
     foreignKey: 'AddressId',
     onDelete: 'CASCADE'
 })
-Competition.belongsTo(Adress)
+Competition.belongsTo(Adress, {
+    foreignKey: 'AddressId'
+})
 
 Competition.hasMany(Team, {
     foreignKey: 'CompetitionId',
@@ -175,61 +184,81 @@ User.hasOne(Teammembers, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-Teammembers.belongsTo(User)
+Teammembers.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 Team.hasMany(Teammembers, {
     foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
-Teammembers.belongsTo(Team)
+Teammembers.belongsTo(Team, {
+    foreignKey: 'TeamId'
+})
 
 User.hasOne(Projects, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-Projects.belongsTo(User)
+Projects.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 Discipline.hasOne(Competition, {
     foreignKey: 'disciplineId',
     onDelete: 'CASCADE'
 })
-Competition.belongsTo(Discipline)
+Competition.belongsTo(Discipline, {
+    foreignKey: 'disciplineId'
+})
 
 Regions.hasOne(User, {
     foreignKey: 'idRegions',
     onDelete: 'CASCADE'
 })
-User.belongsTo(Regions)
+User.belongsTo(Regions, {
+    foreignKey: 'idRegions'
+})
 
 Regions.hasOne(Adress, {
     foreignKey: 'regionId',
     onDelete: 'CASCADE'
 })
-Adress.belongsTo(Regions)
+Adress.belongsTo(Regions, {
+    foreignKey: 'regionId'
+})
 
 Competition.hasOne(CompetitionRegion, {
     foreignKey: 'competitionId',
     onDelete: 'CASCADE'
 })
-CompetitionAdmins.belongsTo(Competition)
+CompetitionAdmins.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 Regions.hasOne(CompetitionRegion, {
     foreignKey: 'regionId',
     onDelete: 'CASCADE'
 })
-CompetitionAdmins.belongsTo(Regions)
+CompetitionAdmins.belongsTo(Regions, {
+    foreignKey: 'regionId'
+})
 
 User.hasOne(Application, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-Application.belongsTo(User)
+Application.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 Competition.hasOne(Application, {
     foreignKey: 'CompetitionId',
     onDelete: 'CASCADE'
 })
-Application.belongsTo(Competition)
+Application.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 Team.hasMany(Application, {
     foreignKey: 'TeamId',
@@ -244,32 +273,42 @@ Competition.hasMany(CompetitionResult, {
     foreignKey: 'CompetitionId',
     onDelete: 'CASCADE'
 })
-CompetitionResult.belongsTo(Competition)
+CompetitionResult.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 User.hasMany(CompetitionResult, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-CompetitionResult.belongsTo(User)
+CompetitionResult.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 Team.hasMany(CompetitionResult, {
     foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
-CompetitionResult.belongsTo(Team)
+CompetitionResult.belongsTo(Team, {
+    foreignKey: 'TeamId'
+})
 
 // Связи для приглашений
 Team.hasMany(Invitation, {
     foreignKey: 'TeamId',
     onDelete: 'CASCADE'
 })
-Invitation.belongsTo(Team)
+Invitation.belongsTo(Team, {
+    foreignKey: 'TeamId'
+})
 
 User.hasMany(Invitation, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
-Invitation.belongsTo(User)
+Invitation.belongsTo(User, {
+    foreignKey: 'UserId'
+})
 
 User.hasMany(Invitation, {
     foreignKey: 'InvitedBy',
@@ -285,7 +324,9 @@ Competition.hasMany(Invitation, {
     foreignKey: 'CompetitionId',
     onDelete: 'CASCADE'
 })
-Invitation.belongsTo(Competition)
+Invitation.belongsTo(Competition, {
+    foreignKey: 'CompetitionId'
+})
 
 module.exports = {
     sequelize,

@@ -1,0 +1,20 @@
+{
+  "name": "pp_prostoteam_65",
+  "version": "1.0.0",
+  "description": "Видео для чек-поинта - https://disk.yandex.ru/i/i8RLp_Tj1yO0ug\r Все диаграммы в pdf файле в репозитории",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hackathonsrus/PP_prostoteam_65.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hackathonsrus/PP_prostoteam_65/issues"
+  },
+  "homepage": "https://github.com/hackathonsrus/PP_prostoteam_65#readme"
+}

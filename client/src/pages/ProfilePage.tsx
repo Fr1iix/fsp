@@ -9,6 +9,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.
 import Badge from '../components/ui/Badge.tsx';
 import api from '../utils/api';
 import Invitations from '../components/Invitations';
+import TeamJoinRequests from '../components/TeamJoinRequests';
 
 interface RegistrationWithCompetition extends CompetitionRegistration {
   competition: Competition;
@@ -34,6 +35,35 @@ const ProfilePage: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Добавляем состояние для отслеживания наличия команд, капитаном которых является пользователь
+  const [isCaptainOfTeams, setIsCaptainOfTeams] = useState(false);
+  
+  // Проверяем, является ли пользователь капитаном какой-либо команды
+  useEffect(() => {
+    const checkIfCaptain = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await api.get('/teams/getTeam');
+        const teams = response.data;
+        
+        const isCapitanOfAnyTeam = teams.some((team: any) => {
+          if (!team.teammembers) return false;
+          
+          return team.teammembers.some((member: any) => 
+            member.UserId === user.id && member.is_capitan
+          );
+        });
+        
+        setIsCaptainOfTeams(isCapitanOfAnyTeam);
+      } catch (error) {
+        console.error('Ошибка при проверке, является ли пользователь капитаном:', error);
+      }
+    };
+    
+    checkIfCaptain();
+  }, [user]);
 
   // Используем useCallback для функции загрузки данных, чтобы она не пересоздавалась при каждом рендере
   const loadData = useCallback(async () => {
@@ -363,6 +393,15 @@ const ProfilePage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Запросы на присоединение к командам (только для капитанов) */}
+            {isCaptainOfTeams && (
+              <Card className="overflow-hidden !bg-white shadow-md">
+                <CardContent className="p-6">
+                  <TeamJoinRequests />
+                </CardContent>
+              </Card>
+            )}
 
             {/* Добавляем использование registrationsWithCompetitions и achievements */}
             <div className="space-y-6">

@@ -15,4 +15,21 @@ router.post('/', authMiddleware, InvitationController.create);
 // Ответ на приглашение (принять/отклонить)
 router.patch('/:id/respond', authMiddleware, InvitationController.respondToInvitation);
 
+// Новые маршруты для запросов на присоединение к команде
+
+// Создание запроса на присоединение к команде
+router.post('/join-request', authMiddleware, InvitationController.createJoinRequest);
+
+// Получение запросов на присоединение ко всем командам, где пользователь капитан
+router.get('/my-teams-join-requests', authMiddleware, InvitationController.getUserTeamsJoinRequests);
+
+// Получение запросов на присоединение к команде
+router.get('/join-requests/:teamId', authMiddleware, InvitationController.getTeamJoinRequests);
+
+// Проверка наличия запроса на присоединение к команде от текущего пользователя
+router.get('/check-join-request/:teamId', authMiddleware, InvitationController.checkJoinRequest);
+
+// Ответ на запрос на присоединение к команде (принять/отклонить)
+router.patch('/join-request/:id/respond', authMiddleware, InvitationController.respondToJoinRequest);
+
 module.exports = router; 

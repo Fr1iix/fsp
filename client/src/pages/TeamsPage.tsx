@@ -1,15 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import { teamsAPI } from '../utils/api';
+import { useAuthStore } from '../store/authStore';
+import { Users, Search, UserPlus } from 'lucide-react';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
+import { invitationAPI } from '../utils/api';
 
+// Расширенный интерфейс для команды с поддержкой новых полей
 interface Team {
 	id: string;
 	name: string;
-	description: string;
-	members: {
+	discription: string;
+	CompetitionId: string;
+	Competition?: {
 		id: string;
-		firstName: string;
-		lastName: string;
+		name: string;
+		discription: string;
+		status: string;
+	};
+	teammembers?: {
+		id: string;
+		UserId: string;
+		TeamId: string;
+		is_capitan: boolean;
+		User?: {
+			id: string;
+			email: string;
+			user_info?: {
+				firstName: string;
+				lastName: string;
+				middleName: string;
+				phone: string;
+			};
+		};
 	}[];
+	lookingForMembers: boolean;
+	availableSlots: number;
+	requiredRoles: string;
 	createdAt: string;
 }
 
@@ -17,26 +45,142 @@ const TeamsPage: React.FC = () => {
 	const [teams, setTeams] = useState<Team[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [error, setError] = useState<string | null>(null);
+	const { user } = useAuthStore();
+	// Обновляем интерфейс, добавляя isMember и requestId
+	const [teamRequests, setTeamRequests] = useState<Record<string, {
+		exists: boolean, 
+		status?: string, 
+		isMember?: boolean,
+		requestId?: string
+	}>>({});
 
 	useEffect(() => {
 		const fetchTeams = async () => {
 			try {
 				setLoading(true);
-				const data = await teamsAPI.getAll();
+				// Используем метод для получения команд, которые ищут участников
+				const data = await teamsAPI.getTeamsLookingForMembers();
+				console.log('Загружены команды, которые ищут участников:', data);
 				setTeams(data);
 				setError(null);
+				
+				// Если пользователь авторизован, проверяем заявки для каждой команды
+				if (user && data.length > 0) {
+					const requests: Record<string, {
+						exists: boolean, 
+						status?: string, 
+						isMember?: boolean,
+						requestId?: string
+					}> = {};
+					for (const team of data) {
+						try {
+							const response = await invitationAPI.checkJoinRequest(team.id);
+							requests[team.id] = response;
+						} catch (err) {
+							console.error(`Ошибка при проверке заявки для команды ${team.id}:`, err);
+							requests[team.id] = { exists: false };
+						}
+					}
+					setTeamRequests(requests);
+				}
 			} catch (err) {
 				setError('Ошибка при загрузке команд');
-				console.error(err);
+				console.error('Ошибка при загрузке команд:', err);
 			} finally {
 				setLoading(false);
 			}
 		};
 
 		fetchTeams();
-	}, []);
+	}, [user]);
 
-	if (loading) {
+	// Функция для отправки заявки на присоединение к команде
+	const handleJoinRequest = async (teamId: string, competitionId: string) => {
+		try {
+			setLoading(true);
+			console.log('Отправляем запрос на присоединение к команде:', {
+				TeamId: teamId,
+				CompetitionId: competitionId,
+				CurrentUser: user
+			});
+			
+			// Проверяем, нет ли уже отправленного запроса
+			const checkResult = await invitationAPI.checkJoinRequest(teamId);
+			if (checkResult.exists) {
+				alert('Вы уже отправили запрос на присоединение к этой команде!');
+				setTeamRequests({
+					...teamRequests,
+					[teamId]: checkResult
+				});
+				setLoading(false);
+				return;
+			}
+			
+			// Если уже член команды
+			if (checkResult.isMember) {
+				alert('Вы уже являетесь членом этой команды!');
+				setLoading(false);
+				return;
+			}
+			
+			// Используем метод API для отправки запроса на присоединение
+			const response = await invitationAPI.createJoinRequest({
+				TeamId: teamId,
+				CompetitionId: competitionId
+			});
+			
+			console.log('Успешный ответ от сервера:', response);
+			alert('Заявка на присоединение успешно отправлена!');
+			
+			// Обновляем состояние запросов
+			setTeamRequests({
+				...teamRequests,
+				[teamId]: { exists: true, status: 'pending', requestId: response.id }
+			});
+		} catch (error: any) {
+			console.error('Ошибка при отправке заявки:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			alert(error.response?.data?.message || 'Ошибка при отправке заявки');
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	// Получение статуса кнопки и текста для команды
+	const getJoinButtonState = (teamId: string) => {
+		if (!user) {
+			return { text: 'Для подачи заявки войдите в систему', disabled: true, variant: 'primary' as const };
+		}
+		
+		const request = teamRequests[teamId];
+		if (!request) {
+			return { text: 'Подать заявку', disabled: false, variant: 'primary' as const };
+		}
+		
+		if (request.isMember) {
+			return { text: 'Вы участник команды', disabled: true, variant: 'primary' as const };
+		}
+		
+		if (request.exists) {
+			switch (request.status) {
+				case 'pending':
+					return { text: 'Заявка отправлена', disabled: true, variant: 'outline' as const };
+				case 'accepted':
+					return { text: 'Заявка принята', disabled: true, variant: 'primary' as const };
+				case 'rejected':
+					return { text: 'Заявка отклонена', disabled: true, variant: 'primary' as const };
+				default:
+					return { text: 'Подать заявку', disabled: false, variant: 'primary' as const };
+			}
+		}
+		
+		return { text: 'Подать заявку', disabled: false, variant: 'primary' as const };
+	};
+
+	if (loading && teams.length === 0) {
 		return (
 			<div className="min-h-screen flex items-center justify-center">
 				<div className="animate-spin h-12 w-12 border-4 border-primary-500 rounded-full border-t-transparent"></div>
@@ -46,7 +190,7 @@ const TeamsPage: React.FC = () => {
 
 	if (error) {
 		return (
-			<div className="container mx-auto px-4 py-8">
+			<div className="container mx-auto px-4 py-8 pt-24">
 				<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
 					<strong className="font-bold">Ошибка!</strong>
 					<span className="block sm:inline"> {error}</span>
@@ -56,36 +200,99 @@ const TeamsPage: React.FC = () => {
 	}
 
 	return (
-		<div className="container mx-auto px-4 py-8">
-			<h1 className="text-3xl font-bold mb-6">Команды</h1>
+		<div className="container mx-auto px-4 py-8 pt-24">
+			<div className="flex flex-wrap items-center justify-between mb-6">
+				<div>
+					<h1 className="text-3xl font-bold">Команды, которые ищут участников</h1>
+					<p className="text-neutral-500 mt-1">
+						Здесь вы можете найти команды, которым требуются дополнительные участники
+					</p>
+				</div>
+			</div>
 
 			{teams.length === 0 ? (
-				<div className="text-center py-8">
-					<p className="text-gray-500">Команды не найдены</p>
+				<div className="text-center py-12 bg-neutral-50 rounded-lg border border-neutral-200">
+					<Search className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
+					<h2 className="text-xl font-medium mb-2">Пока нет команд, которые ищут участников</h2>
+					<p className="text-neutral-500 max-w-md mx-auto">
+						Вы можете создать свою команду при регистрации на соревнование и указать, что ищете дополнительных участников.
+					</p>
 				</div>
 			) : (
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-					{teams.map((team) => (
-						<div key={team.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-							<div className="p-6">
-								<h2 className="text-xl font-semibold mb-2">{team.name}</h2>
-								<p className="text-gray-600 mb-4">{team.description}</p>
-
-								<h3 className="font-medium mb-2">Участники:</h3>
-								<ul className="space-y-1">
-									{team.members.map((member) => (
-										<li key={member.id} className="text-sm">
-											{member.firstName} {member.lastName}
-										</li>
-									))}
-								</ul>
-
-								<div className="mt-4 text-sm text-gray-500">
-									Создана: {new Date(team.createdAt).toLocaleDateString()}
-								</div>
-							</div>
-						</div>
-					))}
+					{teams.map((team) => {
+						const buttonState = getJoinButtonState(team.id);
+						
+						return (
+							<Card key={team.id} className="overflow-hidden hover:shadow-md transition-shadow">
+								<CardHeader>
+									<div className="flex flex-wrap gap-2 mb-2">
+										<Badge variant="success">Набор открыт</Badge>
+										<Badge variant="primary">{team.availableSlots} {
+											team.availableSlots === 1 ? 'место' : 
+											team.availableSlots < 5 ? 'места' : 'мест'
+										}</Badge>
+									</div>
+									<CardTitle className="line-clamp-2">{team.name}</CardTitle>
+									{team.Competition && (
+										<div className="text-sm text-neutral-500 mt-1">
+											Соревнование: {team.Competition.name}
+										</div>
+									)}
+								</CardHeader>
+								
+								<CardContent>
+									{team.discription && (
+										<p className="text-neutral-700 mb-4 line-clamp-3">{team.discription}</p>
+									)}
+									
+									{team.teammembers && team.teammembers.length > 0 && (
+										<div className="mb-4">
+											<h4 className="text-sm font-medium mb-2">Текущий состав команды:</h4>
+											<ul className="space-y-1">
+												{team.teammembers.map((member) => (
+													<li key={member.id} className="flex items-center text-sm">
+														{member.is_capitan && <span className="text-primary-600 font-medium mr-1">★</span>}
+														<span>
+															{member.User?.user_info?.firstName || 'Участник'} {member.User?.user_info?.lastName || ''}
+														</span>
+													</li>
+												))}
+											</ul>
+										</div>
+									)}
+									
+									{team.requiredRoles && (
+										<div>
+											<h4 className="text-sm font-medium mb-2">Требуемые специализации:</h4>
+											<p className="text-sm text-neutral-600">{team.requiredRoles}</p>
+										</div>
+									)}
+								</CardContent>
+								
+								<CardFooter>
+									<div className="w-full">
+										{user ? (
+											<Button 
+												variant={buttonState.variant}
+												size="sm" 
+												fullWidth 
+												leftIcon={<UserPlus className="h-4 w-4" />}
+												onClick={() => handleJoinRequest(team.id, team.CompetitionId)}
+												disabled={buttonState.disabled || loading}
+											>
+												{buttonState.text}
+											</Button>
+										) : (
+											<div className="text-neutral-500 text-sm italic text-center">
+												Для подачи заявки войдите в систему
+											</div>
+										)}
+									</div>
+								</CardFooter>
+							</Card>
+						);
+					})}
 				</div>
 			)}
 		</div>

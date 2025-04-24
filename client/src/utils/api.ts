@@ -417,6 +417,83 @@ export const invitationAPI = {
 	respond: async (id: string, status: 'accepted' | 'rejected') => {
 		const { data } = await $api.patch(`/invitations/${id}/respond`, { status });
 		return data;
+	},
+
+	// Создание запроса на присоединение к команде
+	createJoinRequest: async (requestData: {
+		TeamId: string;
+		CompetitionId: string;
+	}) => {
+		console.log('Отправка запроса на присоединение к команде:', requestData);
+		try {
+			const { data } = await $api.post('/invitations/join-request', requestData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при отправке запроса на присоединение:', error);
+			if (error.response) {
+				console.error('Ответ сервера:', error.response.data);
+				console.error('Статус:', error.response.status);
+			}
+			throw error;
+		}
+	},
+
+	// Получение запросов на присоединение к командам, где пользователь является капитаном
+	getMyTeamsJoinRequests: async () => {
+		console.log('Получение всех запросов на присоединение к командам пользователя');
+		try {
+			const { data } = await $api.get('/invitations/my-teams-join-requests');
+			console.log('Ответ от сервера по запросам на присоединение к командам пользователя:', data);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при получении запросов на присоединение:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
+	},
+
+	// Получение запросов на присоединение к команде
+	getTeamJoinRequests: async (teamId: string) => {
+		console.log(`Получение запросов на присоединение к команде ID ${teamId}`);
+		try {
+			const { data } = await $api.get(`/invitations/join-requests/${teamId}`);
+			console.log(`Ответ от сервера по запросам на присоединение:`, data);
+			return data;
+		} catch (error: any) {
+			console.error(`Ошибка при получении запросов на присоединение к команде ${teamId}:`, error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
+	},
+
+	// Проверка наличия запроса на присоединение к команде от текущего пользователя
+	checkJoinRequest: async (teamId: string) => {
+		console.log(`Проверка наличия запроса на присоединение к команде ID ${teamId}`);
+		try {
+			const { data } = await $api.get(`/invitations/check-join-request/${teamId}`);
+			console.log(`Результат проверки запроса на присоединение:`, data);
+			return data;
+		} catch (error: any) {
+			console.error(`Ошибка при проверке запроса на присоединение:`, error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			return { exists: false };
+		}
+	},
+
+	// Ответ на запрос на присоединение к команде (принять/отклонить)
+	respondToJoinRequest: async (id: string, status: 'accepted' | 'rejected') => {
+		console.log(`Ответ на запрос присоединения ID ${id}, статус: ${status}`);
+		const { data } = await $api.patch(`/invitations/join-request/${id}/respond`, { status });
+		return data;
 	}
 };
 

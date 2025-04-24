@@ -72,9 +72,32 @@ const start = async () => {
                 await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "requiredRoles" TEXT DEFAULT ''`);
             }
             
-            console.log('Миграция завершена успешно');
+            console.log('Миграция таблицы teams завершена успешно');
         } catch (migrationError) {
-            console.error('Ошибка при выполнении миграции:', migrationError);
+            console.error('Ошибка при выполнении миграции teams:', migrationError);
+        }
+        
+        // Добавляем отсутствующие столбцы в таблицу invitations
+        try {
+            console.log('Выполняем миграцию для таблицы invitations...')
+            
+            // Проверяем существование столбца type
+            const [typeResults] = await sequelize.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'invitations' 
+                AND column_name = 'type'
+            `);
+            
+            if (typeResults.length === 0) {
+                console.log('Добавляем столбец type в таблицу invitations...');
+                await sequelize.query(`ALTER TABLE "invitations" ADD COLUMN "type" VARCHAR(255) DEFAULT 'invitation'`);
+                console.log('Столбец type успешно добавлен');
+            }
+            
+            console.log('Миграция таблицы invitations завершена успешно');
+        } catch (migrationError) {
+            console.error('Ошибка при выполнении миграции invitations:', migrationError);
         }
 
         await sequelize.sync()
