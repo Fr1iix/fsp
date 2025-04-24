@@ -34,7 +34,6 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import CompetitionResults from '../components/CompetitionResults';
 import CompetitionResultForm from '../components/CompetitionResultForm';
-import TeamResultForm from '../components/TeamResultForm';
 import api from '../utils/api';
 
 // CSS стили для анимаций и визуальных эффектов
@@ -111,7 +110,6 @@ const CompetitionPage: React.FC = () => {
   const [competition, setCompetition] = useState<Competition | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeResultTab, setActiveResultTab] = useState<'individual' | 'team'>('individual');
   const [participantsCount, setParticipantsCount] = useState<number>(0);
   const [teamsCount, setTeamsCount] = useState<number>(0);
 
@@ -651,37 +649,17 @@ const CompetitionPage: React.FC = () => {
                   <div className="mb-5">
                     <div className="flex border-b border-gray-200">
                       <button
-                        className={`pb-3 px-4 font-medium text-sm border-b-2 -mb-px transition-colors ${activeResultTab === 'individual'
-                          ? 'text-blue-600 border-blue-600'
-                          : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-                          }`}
-                        onClick={() => setActiveResultTab('individual')}
+                        className="pb-3 px-4 font-medium text-sm border-b-2 -mb-px text-blue-600 border-blue-600"
                       >
                         Участники
-                      </button>
-                      <button
-                        className={`pb-3 px-4 font-medium text-sm border-b-2 -mb-px transition-colors ${activeResultTab === 'team'
-                          ? 'text-blue-600 border-blue-600'
-                          : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-                          }`}
-                        onClick={() => setActiveResultTab('team')}
-                      >
-                        Команды
                       </button>
                     </div>
                   </div>
 
-                  {activeResultTab === 'individual' && isOrganizer && (
+                  {isOrganizer && (
                     <CompetitionResultForm
                       competitionId={id!}
                       onResultAdded={refreshResults}
-                    />
-                  )}
-
-                  {activeResultTab === 'team' && (
-                    <TeamResultForm
-                      competitionId={id!}
-                      onResultsAdded={refreshResults}
                     />
                   )}
                 </div>
