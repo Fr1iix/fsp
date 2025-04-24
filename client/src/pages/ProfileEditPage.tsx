@@ -49,7 +49,7 @@ const ProfileEditPage: React.FC = () => {
 
 	useEffect(() => {
 		const fetchRegions = async () => {
-			if (user?.role === 'regional') {
+			if (user?.role === 'regional' || user?.role === 'athlete') {
 				try {
 					setLoadingRegions(true);
 					console.log('Загрузка списка регионов...');
@@ -94,8 +94,8 @@ const ProfileEditPage: React.FC = () => {
 				setValue('github', userInfo.github || '');
 				setValue('discription', userInfo.discription || '');
 				
-				// Если пользователь региональный представитель, устанавливаем значение региона
-				if (user.role === 'regional' && user.region) {
+				// Если пользователь может изменять регион, устанавливаем значение региона
+				if ((user.role === 'regional' || user.role === 'athlete') && user.region) {
 					// Преобразуем строковое значение региона в число, если оно существует
 					try {
 						const regionValue = user.region ? parseInt(user.region, 10) : null;
@@ -122,8 +122,8 @@ const ProfileEditPage: React.FC = () => {
 			// Определяем, какие данные отправлять на сервер
 			const updateData: any = { ...data };
 			
-			// Если пользователь региональный представитель, обрабатываем поле idRegions
-			if (user.role === 'regional') {
+			// Если пользователь может изменять регион, обрабатываем поле idRegions
+			if (user.role === 'regional' || user.role === 'athlete') {
 				// Проверяем, выбран ли регион
 				if (data.idRegions) {
 					let regionId: number;
@@ -336,8 +336,8 @@ const ProfileEditPage: React.FC = () => {
 								</p>
 							</div>
 
-							{/* Поле выбора региона для пользователей с ролью "regional" */}
-							{user?.role === 'regional' && (
+							{/* Поле выбора региона для пользователей, которым это разрешено */}
+							{(user?.role === 'regional' || user?.role === 'athlete') && (
 								<div>
 									<label className="block text-sm font-medium text-neutral-700 mb-1.5 flex items-center">
 										<MapPin className="h-4 w-4 mr-1.5 text-neutral-500" />

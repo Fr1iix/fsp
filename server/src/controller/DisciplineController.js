@@ -3,7 +3,7 @@ const { Op } = require('sequelize');
 const {Discipline} = require("../models/models")
 
 class DisciplineController{
-    getAll = (req, res, next) => {
+    async getAll(req, res, next) {
         try{
             let limit = parseInt(req.query.limit, 10) || 10;
             let offset = parseInt(req.query.offset, 10) || 0;
@@ -17,14 +17,14 @@ class DisciplineController{
             }
             : {};
 
-            const disc = Discipline.findAll({
+            const disc = await Discipline.findAll({
                 where: whereClause,
                 limit, offset
             })
 
             return res.status(200).json(disc)
         }catch (error){
-            next(ApiError.badRequest(e.message))
+            next(ApiError.badRequest(error.message))
         }        
     }
 

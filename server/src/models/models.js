@@ -244,7 +244,7 @@ CompetitionAdmins.belongsTo(Regions, {
     foreignKey: 'regionId'
 })
 
-User.hasOne(Application, {
+User.hasMany(Application, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE'
 })
