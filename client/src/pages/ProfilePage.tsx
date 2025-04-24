@@ -359,7 +359,7 @@ const ProfilePage: React.FC = () => {
               <CardHeader className="rounded-xl bg-neutral-50 border-b border-neutral-100 py-4 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg font-semibold text-neutral-800 flex items-center">
                   <Calendar className="h-5 w-5 mr-2 text-primary-600" />
-                  Мои соревнования
+                  Соревнования и участие в командах
                 </CardTitle>
 
                 <Button
