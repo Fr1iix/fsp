@@ -41,6 +41,44 @@ interface Team {
 	createdAt: string;
 }
 
+// Добавляем функцию форматирования имени пользователя
+const formatUserName = (user: any) => {
+	if (!user) {
+		return 'Участник';
+	}
+
+	// Проверяем наличие user_info напрямую
+	if (!user.user_info) {
+		return user.email || `Участник (ID: ${user.id || 'Неизвестен'})`;
+	}
+
+	const { firstName, lastName, middleName } = user.user_info;
+	const parts = [
+		lastName || '',
+		firstName || '',
+		middleName || ''
+	].filter(Boolean);
+
+	return parts.length > 0 ? parts.join(' ') : (user.email || `Участник (ID: ${user.id || 'Неизвестен'})`);
+};
+
+interface TeamMember {
+	id: string;
+	UserId: string;
+	TeamId: string;
+	is_capitan: boolean;
+	user?: {
+		id: string;
+		email: string;
+		user_info?: {
+			firstName: string;
+			lastName: string;
+			middleName: string;
+			phone: string;
+		};
+	};
+}
+
 const TeamsPage: React.FC = () => {
 	const [teams, setTeams] = useState<Team[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -58,21 +96,32 @@ const TeamsPage: React.FC = () => {
 		const fetchTeams = async () => {
 			try {
 				setLoading(true);
-				// Используем метод для получения команд, которые ищут участников
 				const data = await teamsAPI.getTeamsLookingForMembers();
-				console.log('Загружены команды, которые ищут участников:', data);
-				setTeams(data);
+				console.log('Полученные данные о командах:', data);
+				
+				// Преобразуем данные, чтобы убедиться, что структура соответствует ожиданиям
+				const teamsWithUserInfo = data.map((team: Team) => ({
+					...team,
+					teammembers: team.teammembers?.map((member: any) => ({
+						...member,
+						user: member.user || member.User // Поддерживаем оба варианта
+					}))
+				}));
+				
+				console.log('Обработанные данные команд:', teamsWithUserInfo);
+				setTeams(teamsWithUserInfo);
 				setError(null);
 				
 				// Если пользователь авторизован, проверяем заявки для каждой команды
-				if (user && data.length > 0) {
+				if (user && teamsWithUserInfo.length > 0) {
 					const requests: Record<string, {
 						exists: boolean, 
 						status?: string, 
 						isMember?: boolean,
 						requestId?: string
 					}> = {};
-					for (const team of data) {
+					
+					for (const team of teamsWithUserInfo) {
 						try {
 							const response = await invitationAPI.checkJoinRequest(team.id);
 							requests[team.id] = response;
@@ -250,11 +299,16 @@ const TeamsPage: React.FC = () => {
 										<div className="mb-4">
 											<h4 className="text-sm font-medium mb-2">Текущий состав команды:</h4>
 											<ul className="space-y-1">
-												{team.teammembers.map((member) => (
+												{team.teammembers.map((member: TeamMember) => (
 													<li key={member.id} className="flex items-center text-sm">
 														{member.is_capitan && <span className="text-primary-600 font-medium mr-1">★</span>}
 														<span>
-															{member.User?.user_info?.firstName || 'Участник'} {member.User?.user_info?.lastName || ''}
+															{member.user?.user_info ? (
+																`${member.user.user_info.lastName || ''} ${member.user.user_info.firstName || ''} ${member.user.user_info.middleName || ''}`.trim() +
+																(member.user.email ? ` (${member.user.email})` : '')
+															) : (
+																`Участник (ID: ${member.UserId})`
+															)}
 														</span>
 													</li>
 												))}
