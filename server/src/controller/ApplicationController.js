@@ -5,7 +5,7 @@ const { Application, User, Team, Competition, Teammembers } = require("../models
 class ApplicationController {
     async getAll(req, res, next) {
         try {
-            let limit = parseInt(req.query.limit, 10) || 10;
+            let limit = parseInt(req.query.limit, 10) || 100; // Увеличим лимит для получения всех заявок
             let offset = parseInt(req.query.offset, 10) || 0;
             const search = req.query.search || '';
             const status = req.query.status || null;
@@ -25,17 +25,25 @@ class ApplicationController {
                 whereClause.status = status;
             }
 
-            // Сначала получим список ID всех команд из заявок
-            const applications = await Application.findAll({
-                attributes: ['TeamId'],
+            // Получаем список всех заявок сначала для сбора ID
+            const applicationsBasic = await Application.findAll({
                 where: whereClause,
+                attributes: ['id', 'TeamId', 'CompetitionId', 'UserId'],
                 raw: true
             });
             
-            const teamIds = applications.map(app => app.TeamId).filter(id => id);
-            console.log('ID команд из заявок:', teamIds);
+            console.log(`Найдено ${applicationsBasic.length} заявок для обработки`);
             
-            // Получим данные о командах отдельным запросом
+            // Собираем все ID
+            const teamIds = applicationsBasic.map(app => app.TeamId).filter(id => id);
+            const competitionIds = applicationsBasic.map(app => app.CompetitionId).filter(id => id);
+            const userIds = applicationsBasic.map(app => app.UserId).filter(id => id);
+            
+            console.log('ID команд из заявок:', teamIds);
+            console.log('ID соревнований из заявок:', competitionIds);
+            console.log('ID пользователей из заявок:', userIds);
+            
+            // Получаем данные о командах
             const teams = await Team.findAll({
                 where: {
                     id: {
@@ -45,19 +53,7 @@ class ApplicationController {
                 raw: true
             });
             
-            console.log('Данные о командах:', teams);
-            
-            // Сопоставление ID команд с их данными для быстрого поиска
-            const teamMap = {};
-            teams.forEach(team => {
-                teamMap[team.id] = team;
-            });
-
-            // Сначала получим список ID всех соревнований из заявок
-            const competitionIds = applications.map(app => app.CompetitionId).filter(id => id);
-            console.log('ID соревнований из заявок:', competitionIds);
-
-            // Получим данные о соревнованиях отдельным запросом
+            // Получаем данные о соревнованиях
             const competitions = await Competition.findAll({
                 where: {
                     id: {
@@ -66,21 +62,9 @@ class ApplicationController {
                 },
                 raw: true
             });
-
-            console.log('Данные о соревнованиях:', competitions);
-
-            // Сопоставление ID соревнований с их данными для быстрого поиска
-            const competitionMap = {};
-            competitions.forEach(competition => {
-                competitionMap[competition.id] = competition;
-            });
-
-            // Получим данные о пользователях (капитанах команд)
-            const userIds = applications.map(app => app.UserId).filter(id => id);
-            console.log('ID пользователей из заявок:', userIds);
-
-            // Получаем базовую информацию о пользователях
-            const basicUsers = await User.findAll({
+            
+            // Получаем данные о пользователях
+            const users = await User.findAll({
                 where: {
                     id: {
                         [Op.in]: userIds
@@ -89,10 +73,8 @@ class ApplicationController {
                 attributes: ['id', 'email', 'role'],
                 raw: true
             });
-
-            console.log(`Получено ${basicUsers.length} пользователей`);
-
-            // Получаем информацию user_info
+            
+            // Получаем информацию user_info для пользователей
             const userInfos = await require('../models/models').UserInfo.findAll({
                 where: {
                     UserId: {
@@ -101,135 +83,95 @@ class ApplicationController {
                 },
                 raw: true
             });
-
-            console.log(`Получено ${userInfos.length} записей user_info`);
-
-            // Создаем словарь user_info по UserId для быстрого поиска
-            const userInfoMap = {};
-            userInfos.forEach(info => {
-                userInfoMap[info.UserId] = info;
-                console.log(`User info для ${info.UserId}: ${info.firstName} ${info.lastName}`);
-            });
-
-            // Объединяем данные пользователей с их user_info
-            const userMap = {};
-            basicUsers.forEach(user => {
-                const userInfo = userInfoMap[user.id];
-                userMap[user.id] = {
-                    id: user.id,
-                    email: user.email,
-                    role: user.role,
-                    user_info: userInfo ? {
-                        firstName: userInfo.firstName || '',
-                        lastName: userInfo.lastName || '',
-                        middleName: userInfo.middleName || '',
-                        phone: userInfo.phone || ''
+            
+            console.log(`Получено: ${teams.length} команд, ${competitions.length} соревнований, ${users.length} пользователей, ${userInfos.length} user_info`);
+            
+            // Создаем мапы для быстрого поиска
+            const teamMap = teams.reduce((map, team) => {
+                map[team.id] = team;
+                return map;
+            }, {});
+            
+            const competitionMap = competitions.reduce((map, comp) => {
+                map[comp.id] = comp;
+                return map;
+            }, {});
+            
+            const userInfoMap = userInfos.reduce((map, info) => {
+                map[info.UserId] = info;
+                return map;
+            }, {});
+            
+            const userMap = users.reduce((map, user) => {
+                map[user.id] = {
+                    ...user,
+                    user_info: userInfoMap[user.id] ? {
+                        firstName: userInfoMap[user.id].firstName || '',
+                        lastName: userInfoMap[user.id].lastName || '',
+                        middleName: userInfoMap[user.id].middleName || '',
+                        phone: userInfoMap[user.id].phone || ''
                     } : null
                 };
-                
-                console.log(`Данные пользователя ID ${user.id}:`, 
-                    user.email,
-                    userInfo ? `${userInfo.firstName || ''} ${userInfo.lastName || ''}` : 'Нет user_info'
-                );
-            });
-
-            // Определяем расширенные опции включения моделей
-            const includeOptions = [
-                { 
-                    model: User,
-                    attributes: ['id', 'email', 'role'],
-                    include: [{
-                        model: require('../models/models').UserInfo,
-                        as: 'user_info',
-                        required: false,
-                        attributes: ['firstName', 'lastName', 'middleName', 'phone']
-                    }]
-                },
-                { 
-                    model: Team,
-                    required: false, // Устанавливаем required: false для LEFT JOIN
-                    attributes: { exclude: ['createdAt', 'updatedAt'] },
-                    include: [{
-                        model: require('../models/models').Teammembers,
-                        required: false, // Устанавливаем required: false для LEFT JOIN
-                        include: [{
-                            model: User,
-                            required: false, // Устанавливаем required: false для LEFT JOIN
-                            attributes: ['id', 'email'],
-                            include: [{
-                                model: require('../models/models').UserInfo,
-                                as: 'user_info',
-                                required: false, // Устанавливаем required: false для LEFT JOIN
-                                attributes: ['firstName', 'lastName', 'middleName', 'phone']
-                            }]
-                        }]
-                    }]
-                },
-                { 
-                    model: Competition,
-                    required: false, // Устанавливаем required: false для LEFT JOIN
-                    attributes: { exclude: ['createdAt', 'updatedAt'] }
-                }
-            ];
-
-            // Выполняем запрос с включением всех связанных моделей
-            console.log('Получение всех заявок с детальной информацией');
+                return map;
+            }, {});
+            
+            // Теперь, когда у нас есть все данные, получаем полные заявки
             const fullApplications = await Application.findAll({
                 where: whereClause,
                 limit,
                 offset,
-                include: includeOptions,
-                order: [['createdAt', 'DESC']]
+                order: [['createdAt', 'DESC']],
+                include: [
+                    { 
+                        model: Team,
+                        required: false
+                    },
+                    { 
+                        model: Competition,
+                        required: false
+                    },
+                    { 
+                        model: User,
+                        required: false,
+                        include: [{
+                            model: require('../models/models').UserInfo,
+                            as: 'user_info',
+                            required: false
+                        }]
+                    }
+                ]
             });
-
-            console.log('Найдено заявок:', fullApplications.length);
             
-            // Проверка связанной информации и дополнение, если что-то отсутствует
+            console.log('Найдено заявок с включенными моделями:', fullApplications.length);
+            
+            // Обогащаем заявки данными, если что-то отсутствует
             const resultApplications = fullApplications.map(app => {
                 const plainApp = app.get({ plain: true });
                 
-                // Если данные о команде не загрузились через ORM, но мы знаем TeamId и получили данные о команде
+                // Логирование исходных данных
+                console.log(`Обработка заявки ID: ${plainApp.id}`);
+                console.log(`  Исходные данные: Team=${plainApp.Team ? 'есть' : 'нет'}, Competition=${plainApp.Competition ? 'есть' : 'нет'}, User=${plainApp.User ? 'есть' : 'нет'}`);
+                
+                // Добавляем данные о команде, если отсутствуют
                 if (!plainApp.Team && plainApp.TeamId && teamMap[plainApp.TeamId]) {
                     plainApp.Team = teamMap[plainApp.TeamId];
-                    console.log(`Добавлены данные о команде ${teamMap[plainApp.TeamId].name} для заявки ${plainApp.id}`);
+                    console.log(`  Добавлены данные о команде: ${teamMap[plainApp.TeamId].name}`);
                 }
                 
-                // Если данные о соревновании не загрузились через ORM, но мы знаем CompetitionId и получили данные о соревновании
+                // Добавляем данные о соревновании, если отсутствуют
                 if (!plainApp.Competition && plainApp.CompetitionId && competitionMap[plainApp.CompetitionId]) {
                     plainApp.Competition = competitionMap[plainApp.CompetitionId];
-                    console.log(`Добавлены данные о соревновании для заявки ${plainApp.id}: ${plainApp.Competition.name}`);
+                    console.log(`  Добавлены данные о соревновании: ${competitionMap[plainApp.CompetitionId].name || competitionMap[plainApp.CompetitionId].title || 'Без названия'}`);
                 }
                 
-                // Если данные о пользователе не загрузились через ORM, но мы знаем UserId и получили данные о пользователе
+                // Добавляем данные о пользователе, если отсутствуют
                 if (!plainApp.User && plainApp.UserId && userMap[plainApp.UserId]) {
                     plainApp.User = userMap[plainApp.UserId];
-                    console.log(`Добавлены данные о пользователе ${plainApp.User.email} для заявки ${plainApp.id}`);
+                    console.log(`  Добавлены данные о пользователе: ${userMap[plainApp.UserId].email}`);
                 }
                 
-                // Логирование для отладки
-                console.log(`Заявка ID: ${plainApp.id}, TeamId: ${plainApp.TeamId}`);
-                if (plainApp.Team) {
-                    console.log(`  Команда: ID=${plainApp.Team.id}, Название=${plainApp.Team.name || 'Не указано'}`);
-                } else {
-                    console.log(`  Команда: ID=${plainApp.TeamId}, Данные не загружены`);
-                }
-                
-                // Информация о соревновании
-                if (plainApp.Competition) {
-                    console.log(`  Соревнование: ID=${plainApp.Competition.id}, Название=${plainApp.Competition.name || 'Не указано'}`);
-                } else {
-                    console.log(`  Соревнование: ID=${plainApp.CompetitionId}, Данные не загружены`);
-                }
-                
-                // Информация о пользователе
-                if (plainApp.User) {
-                    console.log(`  Пользователь: ID=${plainApp.User.id}, Email=${plainApp.User.email || 'Не указано'}`);
-                    if (plainApp.User.user_info) {
-                        console.log(`    Имя: ${plainApp.User.user_info.firstName || 'Не указано'}, Фамилия: ${plainApp.User.user_info.lastName || 'Не указано'}`);
-                    }
-                } else {
-                    console.log(`  Пользователь: ID=${plainApp.UserId}, Данные не загружены`);
-                }
+                // Логирование финальных данных
+                console.log(`  Финальные данные: Team=${plainApp.Team ? 'есть' : 'нет'}, Competition=${plainApp.Competition ? 'есть' : 'нет'}, User=${plainApp.User ? 'есть' : 'нет'}`);
                 
                 return plainApp;
             });

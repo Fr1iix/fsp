@@ -56,6 +56,25 @@ interface ApplicationItem {
   };
 }
 
+interface TeamMember {
+  id?: string;
+  userId?: string;
+  UserId?: string;
+  isCapitan?: boolean;
+  is_capitan?: boolean;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  User?: {
+    id: string;
+    email: string;
+    user_info?: {
+      firstName?: string;
+      lastName?: string;
+    }
+  };
+}
+
 const CompetitionApplicationsPage: React.FC = () => {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -241,50 +260,79 @@ const CompetitionApplicationsPage: React.FC = () => {
     }
   };
 
-  // Функция получения названия соревнования
-  const getCompetitionName = (competition?: any) => {
-    if (!competition) return 'Соревнование не указано';
+  // Функция получения информации о соревновании
+  const getCompetitionInfo = (competition?: any) => {
+    if (!competition) {
+      return {
+        name: 'Соревнование не указано',
+        dates: '',
+        description: '',
+        format: '',
+        discipline: ''
+      };
+    }
     
-    // Проверяем различные поля, которые могут содержать название
-    if (competition.title) return competition.title;
-    if (competition.name) return competition.name;
+    // Определяем название (может быть в поле name или title)
+    const name = competition.title || competition.name || 'Соревнование без названия';
     
-    return 'Соревнование без названия';
-  };
-
-  // Функция получения дат соревнования в читаемом формате
-  const getCompetitionDates = (competition?: any) => {
-    if (!competition) return '';
-    
-    let result = '';
-    
-    // Добавляем даты проведения, если они есть
+    // Форматируем даты
+    let dates = '';
     if (competition.startdate_cometition && competition.enddate_cometition) {
-      const startDate = formatDate(competition.startdate_cometition);
-      const endDate = formatDate(competition.enddate_cometition);
-      result = `${startDate} - ${endDate}`;
-    } 
-    // Иначе используем обычные даты старта и окончания
-    else if (competition.startdate && competition.enddate) {
-      const startDate = formatDate(competition.startdate);
-      const endDate = formatDate(competition.enddate);
-      result = `${startDate} - ${endDate}`;
+      dates = `${formatDate(competition.startdate_cometition)} - ${formatDate(competition.enddate_cometition)}`;
+    } else if (competition.startdate && competition.enddate) {
+      dates = `${formatDate(competition.startdate)} - ${formatDate(competition.enddate)}`;
+    } else if (competition.startdate) {
+      dates = formatDate(competition.startdate);
     }
     
-    return result;
+    return {
+      id: competition.id,
+      name,
+      dates,
+      description: competition.discription || competition.description || '',
+      format: competition.format || '',
+      discipline: competition.discipline || ''
+    };
   };
 
-  // Функция получения названия команды
-  const getTeamName = (team?: any, teamId?: string) => {
-    if (team && team.name) {
-      return team.name || 'Без названия';
+  // Получение команды и ее участников
+  const getTeamInfo = (team?: any, teamId?: string) => {
+    if (!team) {
+      return {
+        name: teamId ? `Команда ID:${teamId}` : 'Команда не указана',
+        members: [] as TeamMember[]
+      };
     }
     
-    if (teamId) {
-      return `Команда ID:${teamId}`;
-    }
+    const members = team.Teammembers || team.members || [];
+    const teamMembers = members.map((member: any): TeamMember => {
+      // Если участник является объектом Teammember, берем данные из связанного User
+      if (member.User) {
+        return {
+          id: member.User.id,
+          isCapitan: member.is_capitan,
+          firstName: member.User.user_info?.firstName || '',
+          lastName: member.User.user_info?.lastName || '',
+          email: member.User.email
+        };
+      }
+      
+      // Если участник уже преобразован в плоскую структуру
+      return {
+        id: member.userId || member.UserId,
+        isCapitan: member.isCapitan || member.is_capitan,
+        firstName: member.firstName || '',
+        lastName: member.lastName || '',
+        email: member.email || ''
+      };
+    });
     
-    return 'Команда не указана';
+    return {
+      name: team.name || 'Без названия',
+      id: team.id,
+      description: team.discription || team.description || '',
+      members: teamMembers
+    };
   };
 
   // Функция получения имени пользователя
@@ -292,7 +340,7 @@ const CompetitionApplicationsPage: React.FC = () => {
     if (!user) return 'Пользователь не указан';
     
     // Проверяем наличие user_info и данных в нем
-    if (user.user_info && (user.user_info.firstName || user.user_info.lastName)) {
+    if (user.user_info && (user.user_info.lastName || user.user_info.firstName)) {
       // Формируем ФИО из имеющихся данных
       let name = '';
       
@@ -308,33 +356,16 @@ const CompetitionApplicationsPage: React.FC = () => {
         name += name ? ' ' + user.user_info.middleName : user.user_info.middleName;
       }
       
+      // Добавляем email в скобках, если он есть
+      if (user.email) {
+        name += ` (${user.email})`;
+      }
+      
       return name;
     }
     
     // Если нет имени/фамилии, возвращаем email
     return user.email || 'Без имени';
-  };
-
-  // Функция для определения, является ли член команды капитаном
-  const isCaptain = (member: any): boolean => {
-    // Проверяем разные варианты написания поля капитана
-    return Boolean(member.isCapitan || member.is_capitan);
-  };
-
-  // Функция для получения имени члена команды
-  const getMemberName = (member: any): string => {
-    // Проверяем наличие имени/фамилии
-    if (member.firstName || member.lastName) {
-      return `${member.lastName || ''} ${member.firstName || ''}`.trim();
-    }
-    
-    // Проверяем наличие email или userId
-    if (typeof member.email === 'string') {
-      return member.email;
-    }
-    
-    // Возвращаем ID пользователя
-    return `ID: ${member.userId || 'не указан'}`;
   };
 
   const renderTeamDetails = (team?: any) => {
@@ -343,14 +374,16 @@ const CompetitionApplicationsPage: React.FC = () => {
     let result = `Название: ${team.name || 'Не указано'}\n`;
     result += `ID: ${team.id}\n`;
     
-    if (team.discription) {
-      result += `Описание: ${team.discription}\n`;
+    if (team.discription || team.description) {
+      result += `Описание: ${team.discription || team.description || ''}\n`;
     }
     
     if (team.members && team.members.length > 0) {
       result += '\nУчастники команды:\n';
       team.members.forEach((member: any, idx: number) => {
-        result += `- ${isCaptain(member) ? '👑 ' : ''}${getMemberName(member)}\n`;
+        result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}${member.lastName || member.firstName ? 
+          `${member.lastName || ''} ${member.firstName || ''}`.trim() : 
+          member.email || `Участник #${member.id || idx}`}\n`;
       });
     }
     
@@ -431,11 +464,11 @@ const CompetitionApplicationsPage: React.FC = () => {
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                       <div>
                         <CardTitle className="text-lg font-semibold">
-                          {getCompetitionName(application.Competition)}
+                          {getCompetitionInfo(application.Competition).name}
                         </CardTitle>
-                        {application.Competition && getCompetitionDates(application.Competition) && (
+                        {application.Competition && getCompetitionInfo(application.Competition).dates && (
                           <p className="text-sm text-neutral-500 mt-1">
-                            {getCompetitionDates(application.Competition)}
+                            {getCompetitionInfo(application.Competition).dates}
                           </p>
                         )}
                       </div>
@@ -449,30 +482,39 @@ const CompetitionApplicationsPage: React.FC = () => {
                       <div>
                         <h3 className="text-md font-semibold mb-3">Информация о команде</h3>
                         <div className="space-y-2">
-                          <p className="text-sm text-neutral-600">
-                            <span className="font-medium">Название команды:</span> {getTeamName(application.Team, application.TeamId)}
-                          </p>
-                          <p className="text-sm text-neutral-600">
-                            <span className="font-medium">ID Команды:</span> {application.TeamId || 'Не указано'}
-                          </p>
-                          {application.Team?.discription && (
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Описание команды:</span> {application.Team.discription}
-                            </p>
-                          )}
-                          {application.Team?.members && application.Team.members.length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium text-neutral-600">Участники команды:</p>
-                              <ul className="text-sm text-neutral-600 list-disc pl-5 mt-1">
-                                {application.Team.members.map((member, index) => (
-                                  <li key={index}>
-                                    {isCaptain(member) && '👑 '}
-                                    {getMemberName(member)}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                          {(() => {
+                            const teamInfo = getTeamInfo(application.Team, application.TeamId);
+                            return (
+                              <>
+                                <p className="text-sm text-neutral-600">
+                                  <span className="font-medium">Название команды:</span> {teamInfo.name}
+                                </p>
+                                <p className="text-sm text-neutral-600">
+                                  <span className="font-medium">ID Команды:</span> {application.TeamId || 'Не указано'}
+                                </p>
+                                {teamInfo.description && (
+                                  <p className="text-sm text-neutral-600">
+                                    <span className="font-medium">Описание команды:</span> {teamInfo.description}
+                                  </p>
+                                )}
+                                {teamInfo.members && teamInfo.members.length > 0 && (
+                                  <div>
+                                    <p className="text-sm font-medium text-neutral-600">Участники команды:</p>
+                                    <ul className="text-sm text-neutral-600 list-disc pl-5 mt-1">
+                                      {teamInfo.members.map((member: TeamMember, index: number) => (
+                                        <li key={index}>
+                                          {(member.isCapitan || member.is_capitan) && '👑 '}
+                                          {member.lastName || member.firstName ? 
+                                            `${member.lastName || ''} ${member.firstName || ''}`.trim() : 
+                                            member.email || `Участник #${member.id || index}`}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                       
@@ -480,33 +522,40 @@ const CompetitionApplicationsPage: React.FC = () => {
                       <div>
                         <h3 className="text-md font-semibold mb-3">Информация о соревновании</h3>
                         <div className="space-y-2">
-                          <p className="text-sm text-neutral-600">
-                            <span className="font-medium">Название:</span> {getCompetitionName(application.Competition)}
-                          </p>
-                          <p className="text-sm text-neutral-600">
-                            <span className="font-medium">ID соревнования:</span> {application.CompetitionId || 'Не указано'}
-                          </p>
-                          {application.Competition?.discription && (
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Описание:</span> {application.Competition.discription}
-                            </p>
-                          )}
-                          {application.Competition?.format && (
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Формат:</span> {application.Competition.format}
-                            </p>
-                          )}
-                          {application.Competition?.discipline && (
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Дисциплина:</span> {application.Competition.discipline}
-                            </p>
-                          )}
-                          {getCompetitionDates(application.Competition) && (
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Период проведения:</span> {getCompetitionDates(application.Competition)}
-                            </p>
-                          )}
-                          
+                          {(() => {
+                            const competitionInfo = getCompetitionInfo(application.Competition);
+                            return (
+                              <>
+                                <p className="text-sm text-neutral-600">
+                                  <span className="font-medium">Название:</span> {competitionInfo.name}
+                                </p>
+                                <p className="text-sm text-neutral-600">
+                                  <span className="font-medium">ID соревнования:</span> {application.CompetitionId || 'Не указано'}
+                                </p>
+                                {competitionInfo.description && (
+                                  <p className="text-sm text-neutral-600">
+                                    <span className="font-medium">Описание:</span> {competitionInfo.description}
+                                  </p>
+                                )}
+                                {competitionInfo.format && (
+                                  <p className="text-sm text-neutral-600">
+                                    <span className="font-medium">Формат:</span> {competitionInfo.format}
+                                  </p>
+                                )}
+                                {competitionInfo.discipline && (
+                                  <p className="text-sm text-neutral-600">
+                                    <span className="font-medium">Дисциплина:</span> {competitionInfo.discipline}
+                                  </p>
+                                )}
+                                {competitionInfo.dates && (
+                                  <p className="text-sm text-neutral-600">
+                                    <span className="font-medium">Период проведения:</span> {competitionInfo.dates}
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
+
                           {/* Информация о капитане */}
                           <h3 className="text-md font-semibold mt-6 mb-3">Информация о капитане</h3>
                           <div className="space-y-2">
@@ -566,12 +615,14 @@ const CompetitionApplicationsPage: React.FC = () => {
                             ? renderTeamDetails(application.Team)
                             : `ID команды: ${application.TeamId || 'Не указан'}`;
                             
-                          const competitionDetails = application.Competition
-                            ? `Название: ${application.Competition.name || application.Competition.title || 'Не указано'}
+                          const competitionInfo = getCompetitionInfo(application.Competition);
+                          const competitionDetails = application.Competition 
+                            ? `Название: ${competitionInfo.name}
 ID: ${application.Competition.id}
-${application.Competition.discription ? `Описание: ${application.Competition.discription}` : ''}
-${application.Competition.format ? `Формат: ${application.Competition.format}` : ''}
-${application.Competition.discipline ? `Дисциплина: ${application.Competition.discipline}` : ''}`
+${competitionInfo.description ? `Описание: ${competitionInfo.description}` : ''}
+${competitionInfo.format ? `Формат: ${competitionInfo.format}` : ''}
+${competitionInfo.discipline ? `Дисциплина: ${competitionInfo.discipline}` : ''}
+${competitionInfo.dates ? `Период: ${competitionInfo.dates}` : ''}`
                             : 'Соревнование не указано';
                             
                           const details = `
