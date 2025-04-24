@@ -120,6 +120,15 @@ const CompetitionResult = sequelize.define('competition_result', {
     isConfirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
 })
 
+const Invitation = sequelize.define("invitation", {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    TeamId: { type: DataTypes.INTEGER, foreignKey: true },
+    UserId: { type: DataTypes.INTEGER, foreignKey: true },
+    InvitedBy: { type: DataTypes.INTEGER, foreignKey: true },
+    status: { type: DataTypes.STRING, defaultValue: 'pending' },
+    CompetitionId: { type: DataTypes.INTEGER, foreignKey: true },
+})
+
 User.hasOne(UserInfo, {
     foreignKey: 'UserId',
     onDelete: 'CASCADE',
@@ -246,6 +255,35 @@ Team.hasMany(CompetitionResult, {
 })
 CompetitionResult.belongsTo(Team)
 
+// Связи для приглашений
+Team.hasMany(Invitation, {
+    foreignKey: 'TeamId',
+    onDelete: 'CASCADE'
+})
+Invitation.belongsTo(Team)
+
+User.hasMany(Invitation, {
+    foreignKey: 'UserId',
+    onDelete: 'CASCADE'
+})
+Invitation.belongsTo(User)
+
+User.hasMany(Invitation, {
+    foreignKey: 'InvitedBy',
+    onDelete: 'CASCADE',
+    as: 'SentInvitations'
+})
+Invitation.belongsTo(User, {
+    foreignKey: 'InvitedBy',
+    as: 'Inviter'
+})
+
+Competition.hasMany(Invitation, {
+    foreignKey: 'CompetitionId',
+    onDelete: 'CASCADE'
+})
+Invitation.belongsTo(Competition)
+
 module.exports = {
     sequelize,
     User,
@@ -261,5 +299,6 @@ module.exports = {
     Regions,
     CompetitionRegion,
     Application,
-    CompetitionResult
+    CompetitionResult,
+    Invitation
 }

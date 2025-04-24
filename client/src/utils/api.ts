@@ -346,4 +346,29 @@ export const analyticsAPI = {
 	}
 };
 
+// API для работы с приглашениями в команду
+export const invitationAPI = {
+	// Получение всех приглашений для текущего пользователя
+	getMyInvitations: async () => {
+		const { data } = await $api.get('/invitations/my');
+		return data;
+	},
+	
+	// Создание нового приглашения
+	create: async (invitationData: {
+		UserId: string;
+		TeamId: string;
+		CompetitionId: string;
+	}) => {
+		const { data } = await $api.post('/invitations', invitationData);
+		return data;
+	},
+	
+	// Ответ на приглашение (принять/отклонить)
+	respond: async (id: string, status: 'accepted' | 'rejected') => {
+		const { data } = await $api.patch(`/invitations/${id}/respond`, { status });
+		return data;
+	}
+};
+
 export default $api; 

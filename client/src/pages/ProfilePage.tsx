@@ -8,6 +8,7 @@ import Button from '../components/ui/Button.tsx';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
 import Badge from '../components/ui/Badge.tsx';
 import api from '../utils/api';
+import Invitations from '../components/Invitations';
 
 interface RegistrationWithCompetition extends CompetitionRegistration {
   competition: Competition;
@@ -273,6 +274,16 @@ const ProfilePage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Блок с приглашениями */}
+            <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
+              <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4 rounded-xl">
+                <CardTitle className="text-lg font-semibold text-neutral-800 text-center">Приглашения</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <Invitations />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Правая колонка - достижения и активность */}

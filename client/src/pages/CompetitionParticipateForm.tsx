@@ -6,7 +6,7 @@ import { Competition, Team, CompetitionFormat, CompetitionDiscipline } from '../
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
-import { teamsAPI, competitionAPI } from '../utils/api';
+import { teamsAPI, competitionAPI, invitationAPI } from '../utils/api';
 import Badge from '../components/ui/Badge';
 
 // Адаптер для преобразования данных сервера в формат фронтенда
@@ -183,7 +183,17 @@ const CompetitionParticipateForm: React.FC = () => {
       if (validParticipants.length > 0) {
         for (const participantId of validParticipants) {
           console.log(`Отправка приглашения участнику ${participantId} для команды ${createdTeam.id}`);
-          // Здесь должен быть код для отправки приглашения
+          try {
+            await invitationAPI.create({
+              UserId: participantId,
+              TeamId: createdTeam.id,
+              CompetitionId: competitionId ?? ''
+            });
+            console.log('Приглашение успешно отправлено');
+          } catch (inviteError: any) {
+            console.error('Ошибка при отправке приглашения:', inviteError);
+            // Здесь можно добавить логику обработки ошибки, например, показать уведомление
+          }
         }
       }
       
