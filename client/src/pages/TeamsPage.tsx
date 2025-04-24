@@ -103,10 +103,17 @@ const TeamsPage: React.FC = () => {
 				// Преобразуем данные, чтобы убедиться, что структура соответствует ожиданиям
 				const teamsWithUserInfo = data.map((team: Team) => ({
 					...team,
-					teammembers: team.teammembers?.map((member: any) => ({
-						...member,
-						user: member.user || member.User // Поддерживаем оба варианта
-					}))
+					teammembers: team.teammembers?.map((member: any) => {
+						console.log('Обработка участника:', member);
+						// Получаем данные пользователя из свойства user
+						const userInfo = member.user?.user_info;
+						console.log('User info:', userInfo);
+						
+						return {
+							...member,
+							user_info: userInfo
+						};
+					})
 				}));
 
 				console.log('Обработанные данные команд:', teamsWithUserInfo);
@@ -490,10 +497,12 @@ const TeamsPage: React.FC = () => {
 																</span>
 															)}
 															<span className={`${member.is_capitan ? 'font-medium' : ''}`}>
-																{member.User?.user_info ? (
-																	`${member.User.user_info.lastName || ''} ${member.User.user_info.firstName || ''} ${member.User.user_info.middleName || ''}`.trim()
+																{member.user?.user_info ? (
+																	`${member.user.user_info.lastName || ''} ${member.user.user_info.firstName || ''} ${member.user.user_info.middleName || ''}`.trim() + 
+																	(member.user.email ? ` (${member.user.email})` : '') || 
+																	`Участник (ID: ${member.UserId})`
 																) : (
-																	member.User?.email || `Участник (ID: ${member.UserId})`
+																	`Участник (ID: ${member.UserId})`
 																)}
 															</span>
 														</li>
