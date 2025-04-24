@@ -6,6 +6,7 @@ import { Card } from './ui/Card';
 import { Calendar, Users, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 import Button from './ui/Button';
 import Badge from '../components/ui/Badge';
+import { getActualCompetitionStatus, getStatusName } from '../utils/helpers';
 
 interface Competition {
   id: string;
@@ -60,19 +61,19 @@ const formatDate = (dateStr?: string): string => {
   }
 
   console.log(`Попытка форматирования даты: "${dateStr}" (тип: ${typeof dateStr})`);
-  
+
   // Для отладки пробуем разные варианты преобразования
   try {
     // Общее преобразование
     const date = new Date(dateStr);
     console.log(`Преобразование в Date: ${date}`, 'isValid:', !isNaN(date.getTime()));
-    
+
     if (!isNaN(date.getTime())) {
       const formatted = date.toLocaleDateString('ru-RU');
       console.log(`Успешно отформатирована дата: ${formatted}`);
       return formatted;
     }
-    
+
     // Если строка содержит специальные форматы
     if (dateStr.includes('T')) {
       console.log('Обнаружен ISO формат');
@@ -84,18 +85,18 @@ const formatDate = (dateStr?: string): string => {
       console.log('Обнаружен формат с дефисами:', dateStr);
       const parts = dateStr.split('-');
       console.log('Части даты:', parts);
-      
+
       if (parts.length === 3) {
         try {
           const year = parseInt(parts[0]);
           const month = parseInt(parts[1]) - 1;
           const day = parseInt(parts[2]);
-          
+
           console.log(`Преобразованные части: год=${year}, месяц=${month}, день=${day}`);
-          
+
           const constructedDate = new Date(year, month, day);
           console.log('Созданная дата:', constructedDate);
-          
+
           if (!isNaN(constructedDate.getTime())) {
             return constructedDate.toLocaleDateString('ru-RU');
           }
@@ -104,7 +105,7 @@ const formatDate = (dateStr?: string): string => {
         }
       }
     }
-    
+
     // Когда не получается отформатировать дату, возвращаем оригинальное значение для отладки
     console.log('Не удалось отформатировать дату, возвращаем оригинал');
     return dateStr; // Возвращаем оригинальную строку, чтобы видеть фактические данные
@@ -156,13 +157,13 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
   // Улучшенная нормализация данных соревнований для корректного отображения
   const normalizeCompetition = (comp: any): Competition => {
     if (!comp) return { id: 'unknown' };
-    
+
     // Вывод оригинальных данных для отладки
     console.log('Исходные данные соревнования для нормализации:', comp);
-    
+
     // Извлечение идентификатора
     const id = comp.id || comp.ID || comp.competitionId || comp.CompetitionId || 'unknown';
-    
+
     // Извлечение названия (используем несколько полей и проверок)
     let title = '';
     if (typeof comp.title === 'string' && comp.title.trim()) {
@@ -176,7 +177,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
     } else {
       title = id; // Если название не найдено, используем ID
     }
-    
+
     // Извлечение описания с проверкой на пустые строки
     let description = '';
     if (typeof comp.description === 'string' && comp.description.trim()) {
@@ -190,7 +191,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
     } else {
       description = 'Описание отсутствует';
     }
-    
+
     // Извлечение дат с подробным логированием
     console.log('Исходные поля дат:', {
       startDate: comp.startDate,
@@ -231,7 +232,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
       console.log('Найдено поле start:', comp.start);
       startDate = comp.start;
     }
-    
+
     // Попробуем найти дату окончания в разных форматах, включая поля из базы данных
     let endDate = '';
     if (comp.endDate) {
@@ -256,16 +257,16 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
       console.log('Найдено поле end:', comp.end);
       endDate = comp.end;
     }
-    
+
     console.log('Итоговые даты перед нормализацией:', { startDate, endDate });
-    
+
     // Извлечение местоположения и формата
     const location = (comp.location || comp.Location || '').toString();
     const format = (comp.format || comp.Format || '').toString();
-    
+
     // Извлечение статуса
     const status = comp.status || comp.Status || 'active';
-    
+
     // Создаем нормализованный объект соревнования
     const normalizedComp: Competition = {
       id,
@@ -283,7 +284,35 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
       createdAt: comp.createdAt || comp.created_at || comp.CreatedAt,
       updatedAt: comp.updatedAt || comp.updated_at || comp.UpdatedAt
     };
-    
+
+    // Получаем актуальный статус если есть необходимые данные
+    if (normalizedComp.startDate && normalizedComp.endDate) {
+      // Передаем объект только с теми полями, которые существуют в модели
+      const actualStatus = getActualCompetitionStatus({
+        startDate: normalizedComp.startDate,
+        endDate: normalizedComp.endDate,
+        status: normalizedComp.status
+      });
+
+      // Обновляем статус, если он изменился
+      if (normalizedComp.status !== actualStatus) {
+        normalizedComp.status = actualStatus;
+
+        // Здесь можно добавить асинхронное обновление на сервере
+        console.log(`Статус соревнования ${normalizedComp.id} обновлен на ${actualStatus}`);
+        // Асинхронное обновление через setTimeout
+        setTimeout(() => {
+          try {
+            competitionAPI.update(normalizedComp.id, { status: actualStatus })
+              .then(() => console.log(`Статус соревнования ${normalizedComp.id} успешно обновлен на сервере`))
+              .catch(error => console.error(`Ошибка при обновлении статуса соревнования ${normalizedComp.id}:`, error));
+          } catch (error) {
+            console.error(`Ошибка при обновлении статуса соревнования ${normalizedComp.id}:`, error);
+          }
+        }, 0);
+      }
+    }
+
     console.log('Нормализованные данные соревнования:', normalizedComp);
     return normalizedComp;
   };
@@ -339,14 +368,14 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
       setIsLoading(true);
       setError(null);
       setHasAttemptedFetch(true);
-      
+
       // Массивы для хранения всех соревнований, которые нужно отобразить
       let allCompetitions: Competition[] = [];
       let competitionIds: Set<string> = new Set();
       let teams: Team[] = [];
       let applications: any[] = [];
       let combinedTeamApplications: TeamApplication[] = [];
-      
+
       try {
         // 1. Получаем команды пользователя
         try {
@@ -355,7 +384,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
           teams = teamsResponse || [];
           console.log('Получены команды пользователя (сырые данные):', teams);
           setUserTeams(teams);
-          
+
           // Собираем ID соревнований из команд
           teams.forEach((team: Team) => {
             if (team.CompetitionId) {
@@ -374,7 +403,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
           const allCompetitionsResponse = await competitionAPI.getAll();
           const allCompetitionsData = allCompetitionsResponse || [];
           console.log('Получен список всех соревнований (сырые данные):', allCompetitionsData);
-          
+
           // Нормализуем данные соревнований
           if (Array.isArray(allCompetitionsData)) {
             console.log('Получен массив соревнований, длина:', allCompetitionsData.length);
@@ -398,7 +427,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
           applications = applicationsResponse || [];
           console.log('Получены заявки пользователя (сырые данные):', applications);
           setUserApplications(applications);
-          
+
           // Добавляем ID соревнований из заявок
           if (Array.isArray(applications)) {
             applications.forEach((app: any) => {
@@ -413,11 +442,11 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
           console.error('Ошибка при загрузке заявок:', error);
           setUserApplications([]);
         }
-        
+
         // 4. Если у нас есть ID соревнований, но нет полной информации о них, запрашиваем по ID
         if (competitionIds.size > 0) {
           console.log('ID соревнований для запроса:', [...competitionIds]);
-          
+
           // Запрашиваем информацию о конкретных соревнованиях, если их нет в общем списке
           for (const compId of competitionIds) {
             if (!allCompetitions.some(c => c.id === compId)) {
@@ -435,7 +464,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
             }
           }
         }
-        
+
         // 5. Устанавливаем список соревнований
         console.log('Итоговый список соревнований для пользователя:', allCompetitions);
         if (allCompetitions.length > 0) {
@@ -464,7 +493,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
           applications.forEach((app: any) => {
             const teamId = app.teamId || app.TeamId;
             const compId = app.competitionId || app.CompetitionId;
-            
+
             const teamApplication: TeamApplication = {
               id: app.id || 'unknown',
               teamId: teamId,
@@ -480,7 +509,7 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
             if (teamId && teamsMap.has(teamId)) {
               teamApplication.team = teamsMap.get(teamId);
             }
-            
+
             if (compId && competitionsMap.has(compId)) {
               teamApplication.competition = competitionsMap.get(compId);
             }
@@ -519,11 +548,11 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
     if (isFallback && competitions.length <= fallbackCompetitions.length) {
       return true;
     }
-    
+
     // Проверяем, есть ли одобренные заявки на это соревнование
     const hasApprovedApplication = userApplications.some(
-      app => (app.competitionId === competition.id || app.CompetitionId === competition.id) && 
-             (app.status === 'approved' || app.status === 'accepted')
+      app => (app.competitionId === competition.id || app.CompetitionId === competition.id) &&
+        (app.status === 'approved' || app.status === 'accepted')
     );
 
     // Проверяем, участвует ли команда пользователя в соревновании
@@ -590,8 +619,8 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
         </h3>
         {userCompetitions.length > 0 ? (
           userCompetitions.map((competition) => (
-            <Card 
-              key={competition.id} 
+            <Card
+              key={competition.id}
               className="p-4 hover:bg-neutral-50 transition-colors cursor-pointer"
               onClick={() => navigate(getCompetitionUrl(competition.id))}
             >
@@ -601,25 +630,25 @@ const UserCompetitions: React.FC<UserCompetitionsProps> = ({ className }) => {
                     {competition.title || competition.name || competition.id}
                   </h3>
                   {competition.status && (
-                    <Badge 
+                    <Badge
                       className={
-                        competition.status.toLowerCase() === 'active' ? 'bg-green-100 text-green-800' : 
-                        competition.status.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800' : 
-                        competition.status.toLowerCase() === 'canceled' ? 'bg-red-100 text-red-800' : 
-                        'bg-amber-100 text-amber-800'
+                        competition.status.toLowerCase() === 'active' ? 'bg-green-100 text-green-800' :
+                          competition.status.toLowerCase() === 'completed' ? 'bg-blue-100 text-blue-800' :
+                            competition.status.toLowerCase() === 'canceled' ? 'bg-red-100 text-red-800' :
+                              'bg-amber-100 text-amber-800'
                       }
                     >
                       {competition.status}
                     </Badge>
                   )}
                 </div>
-                
+
                 {(competition.description || competition.discription) && (
                   <p className="text-sm text-neutral-600">
                     {competition.description || competition.discription}
                   </p>
                 )}
-                
+
                 <div className="flex flex-wrap gap-4 mt-2">
                   <div className="text-sm text-neutral-500">
                     <span className="font-medium">Начало:</span>{' '}

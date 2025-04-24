@@ -209,8 +209,8 @@ const CompetitionPage: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <CompetitionResultForm 
-                  competitionId={id!} 
+                <CompetitionResultForm
+                  competitionId={id!}
                   onResultAdded={() => {
                     // Refresh the results component
                     const resultsComponent = document.querySelector('[data-results-component]');
@@ -218,7 +218,7 @@ const CompetitionPage: React.FC = () => {
                       const event = new CustomEvent('refreshResults');
                       resultsComponent.dispatchEvent(event);
                     }
-                  }} 
+                  }}
                 />
               </CardContent>
             </Card>

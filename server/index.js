@@ -32,7 +32,7 @@ const start = async () => {
         // Добавляем отсутствующие столбцы в таблицу teams
         try {
             console.log('Выполняем миграцию для таблицы teams...')
-            
+
             // Проверяем существование столбца lookingForMembers
             const [lookingForMembersResults] = await sequelize.query(`
                 SELECT column_name 
@@ -40,12 +40,12 @@ const start = async () => {
                 WHERE table_name = 'teams' 
                 AND column_name = 'lookingForMembers'
             `);
-            
+
             if (lookingForMembersResults.length === 0) {
                 console.log('Добавляем столбец lookingForMembers...');
                 await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "lookingForMembers" BOOLEAN DEFAULT false`);
             }
-            
+
             // Проверяем существование столбца availableSlots
             const [availableSlotsResults] = await sequelize.query(`
                 SELECT column_name 
@@ -53,12 +53,12 @@ const start = async () => {
                 WHERE table_name = 'teams' 
                 AND column_name = 'availableSlots'
             `);
-            
+
             if (availableSlotsResults.length === 0) {
                 console.log('Добавляем столбец availableSlots...');
                 await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "availableSlots" INTEGER DEFAULT 0`);
             }
-            
+
             // Проверяем существование столбца requiredRoles
             const [requiredRolesResults] = await sequelize.query(`
                 SELECT column_name 
@@ -66,21 +66,21 @@ const start = async () => {
                 WHERE table_name = 'teams' 
                 AND column_name = 'requiredRoles'
             `);
-            
+
             if (requiredRolesResults.length === 0) {
                 console.log('Добавляем столбец requiredRoles...');
                 await sequelize.query(`ALTER TABLE "teams" ADD COLUMN "requiredRoles" TEXT DEFAULT ''`);
             }
-            
+
             console.log('Миграция таблицы teams завершена успешно');
         } catch (migrationError) {
             console.error('Ошибка при выполнении миграции teams:', migrationError);
         }
-        
+
         // Добавляем отсутствующие столбцы в таблицу invitations
         try {
             console.log('Выполняем миграцию для таблицы invitations...')
-            
+
             // Проверяем существование столбца type
             const [typeResults] = await sequelize.query(`
                 SELECT column_name 
@@ -88,13 +88,13 @@ const start = async () => {
                 WHERE table_name = 'invitations' 
                 AND column_name = 'type'
             `);
-            
+
             if (typeResults.length === 0) {
                 console.log('Добавляем столбец type в таблицу invitations...');
                 await sequelize.query(`ALTER TABLE "invitations" ADD COLUMN "type" VARCHAR(255) DEFAULT 'invitation'`);
                 console.log('Столбец type успешно добавлен');
             }
-            
+
             console.log('Миграция таблицы invitations завершена успешно');
         } catch (migrationError) {
             console.error('Ошибка при выполнении миграции invitations:', migrationError);

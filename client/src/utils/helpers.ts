@@ -61,7 +61,7 @@ export const getDisciplineColor = (discipline: CompetitionDiscipline): string =>
 // Форматирование даты в российском формате
 export const formatDate = (date: string | Date): string => {
   if (!date) return '';
-  
+
   const d = new Date(date);
   return d.toLocaleDateString('ru-RU', {
     year: 'numeric',
@@ -73,7 +73,7 @@ export const formatDate = (date: string | Date): string => {
 // Форматирование даты и времени в российском формате
 export const formatDateTime = (date: string | Date): string => {
   if (!date) return '';
-  
+
   const d = new Date(date);
   return d.toLocaleDateString('ru-RU', {
     year: 'numeric',
@@ -89,7 +89,7 @@ export const isRegistrationOpen = (competition: { registrationStart: string; reg
   const now = new Date();
   const regStart = new Date(competition.registrationStart);
   const regEnd = new Date(competition.registrationEnd);
-  
+
   return now >= regStart && now <= regEnd;
 };
 
@@ -98,7 +98,7 @@ export const isCompetitionInProgress = (competition: { startDate: string; endDat
   const now = new Date();
   const start = new Date(competition.startDate);
   const end = new Date(competition.endDate);
-  
+
   return now >= start && now <= end;
 };
 
@@ -106,6 +106,54 @@ export const isCompetitionInProgress = (competition: { startDate: string; endDat
 export const isCompetitionCompleted = (competition: { endDate: string }): boolean => {
   const now = new Date();
   const end = new Date(competition.endDate);
-  
+
   return now > end;
+};
+
+// Функция для автоматического определения актуального статуса соревнования
+export const getActualCompetitionStatus = (competition: {
+  startDate: string;
+  endDate: string;
+  registrationStart?: string;
+  registrationEnd?: string;
+  status?: string;
+}): CompetitionStatus => {
+  // Если соревнование отменено, оставляем статус без изменений
+  if (competition.status === 'cancelled') {
+    return 'cancelled';
+  }
+
+  const now = new Date();
+  const start = new Date(competition.startDate);
+  const end = new Date(competition.endDate);
+
+  // Если соревнование уже завершилось
+  if (now > end) {
+    return 'completed';
+  }
+
+  // Если соревнование сейчас проходит
+  if (now >= start && now <= end) {
+    return 'in_progress';
+  }
+
+  // Если есть данные о периоде регистрации
+  if (competition.registrationStart && competition.registrationEnd) {
+    const regStart = new Date(competition.registrationStart);
+    const regEnd = new Date(competition.registrationEnd);
+
+    // Если сейчас период регистрации
+    if (now >= regStart && now <= regEnd) {
+      return 'registration';
+    }
+  }
+
+  // Если другие условия не выполнены и соревнование в статусе черновика, оставляем его
+  if (competition.status === 'draft') {
+    return 'draft';
+  }
+
+  // В остальных случаях (например, регистрация еще не началась или уже завершилась)
+  // но соревнование еще не началось, возвращаем статус registration
+  return 'registration';
 };

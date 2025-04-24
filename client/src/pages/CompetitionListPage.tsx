@@ -3,11 +3,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Filter, Calendar, MapPin, X, ClipboardList, Users, ArrowRight } from 'lucide-react';
 import { competitionAPI } from '../utils/api';
 import { useAuthStore } from '../store/authStore.ts';
-import { Competition, CompetitionDiscipline, CompetitionFormat } from '../types';
+import { Competition, CompetitionDiscipline, CompetitionFormat, UserRole, CompetitionStatus } from '../types';
 import Button from '../components/ui/Button.tsx';
 import Input from '../components/ui/Input.tsx';
 import Select from '../components/ui/Select.tsx';
 import { Card, CardContent } from '../components/ui/Card.tsx';
+import {
+  getStatusName,
+  getStatusColor,
+  getFormatName,
+  getDisciplineName,
+  getActualCompetitionStatus
+} from '../utils/helpers';
 
 // Адаптер для преобразования данных сервера в формат фронтенда
 const adaptCompetition = (serverCompetition: any): Competition => {
@@ -102,10 +109,31 @@ const CompetitionListPage: React.FC = () => {
 
         console.log('Количество соревнований в ответе:', response.length);
 
-        // Преобразуем данные с сервера в формат фронтенда
+        // Преобразуем данные с сервера в формат фронтенда и обновляем статусы
         let adaptedCompetitions = [];
         try {
-          adaptedCompetitions = response.map(comp => adaptCompetition(comp));
+          adaptedCompetitions = response.map(comp => {
+            const adaptedComp = adaptCompetition(comp);
+
+            // Получаем актуальный статус на основе дат
+            const actualStatus = getActualCompetitionStatus(adaptedComp);
+
+            // Если статус изменился, делаем запрос на обновление статуса на сервере
+            if (adaptedComp.status !== actualStatus) {
+              try {
+                // Асинхронное обновление статуса на сервере
+                competitionAPI.update(adaptedComp.id, { status: actualStatus });
+              } catch (error) {
+                console.error(`Ошибка при обновлении статуса соревнования ${adaptedComp.id}:`, error);
+              }
+            }
+
+            // Возвращаем объект соревнования с обновленным статусом
+            return {
+              ...adaptedComp,
+              status: actualStatus
+            };
+          });
         } catch (adaptError) {
           console.error('Ошибка при преобразовании данных:', adaptError);
           setError('Ошибка при обработке данных');
@@ -114,7 +142,7 @@ const CompetitionListPage: React.FC = () => {
           return;
         }
 
-        console.log('Преобразованные соревнования:', adaptedCompetitions);
+        console.log('Преобразованные соревнования с обновленными статусами:', adaptedCompetitions);
         setCompetitions(adaptedCompetitions);
         setError(null);
       } catch (err: any) {
