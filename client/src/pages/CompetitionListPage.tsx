@@ -457,7 +457,7 @@ const CompetitionListPage: React.FC = () => {
                   </div>
 
                   <div className="mt-6 md:mt-8 pt-4 border-t border-neutral-100 flex justify-between">
-                    {competition.status === 'registration' && user && (
+                    {(competition.status === 'registration' || competition.status === 'in_progress') && user && (
                       <div className="text-primary-600 font-medium">
                         <button
                           onClick={(e) => handleParticipateClick(e, competition.id)}
