@@ -39,30 +39,30 @@ const ProfilePage: React.FC = () => {
 
   // Добавляем состояние для отслеживания наличия команд, капитаном которых является пользователь
   const [isCaptainOfTeams, setIsCaptainOfTeams] = useState(false);
-  
+
   // Проверяем, является ли пользователь капитаном какой-либо команды
   useEffect(() => {
     const checkIfCaptain = async () => {
       if (!user) return;
-      
+
       try {
         const response = await api.get('/teams/getTeam');
         const teams = response.data;
-        
+
         const isCapitanOfAnyTeam = teams.some((team: any) => {
           if (!team.teammembers) return false;
-          
-          return team.teammembers.some((member: any) => 
+
+          return team.teammembers.some((member: any) =>
             member.UserId === user.id && member.is_capitan
           );
         });
-        
+
         setIsCaptainOfTeams(isCapitanOfAnyTeam);
       } catch (error) {
         console.error('Ошибка при проверке, является ли пользователь капитаном:', error);
       }
     };
-    
+
     checkIfCaptain();
   }, [user]);
 
@@ -309,7 +309,7 @@ const ProfilePage: React.FC = () => {
             {/* Блок с приглашениями */}
             <Card className="overflow-hidden !bg-white shadow-md rounded-xl border-none">
               <CardHeader className="bg-neutral-50 border-b border-neutral-100 py-4 rounded-xl">
-                <CardTitle className="text-lg font-semibold text-neutral-800 text-center">Приглашения</CardTitle>
+                <CardTitle className="text-lg font-semibold text-neutral-800 text-center">Приглашения в команду</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <Invitations />

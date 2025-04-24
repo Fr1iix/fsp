@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { invitationAPI } from '../utils/api';
 import Button from './ui/Button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/Card';
-import { Check, X, Users } from 'lucide-react';
+import { Check, X, Users, Calendar, User, Clock, Info } from 'lucide-react';
 
 interface Invitation {
   id: string;
@@ -47,7 +47,7 @@ const Invitations: React.FC = () => {
         setLoading(true);
         const data = await invitationAPI.getMyInvitations();
         console.log('Получены приглашения:', data);
-        
+
         // Проверяем данные о командах
         if (data && data.length > 0) {
           data.forEach((invitation: Invitation, index: number) => {
@@ -60,7 +60,7 @@ const Invitations: React.FC = () => {
               InvitedBy: invitation.InvitedBy,
               Inviter: invitation.Inviter
             });
-            
+
             // Проверка данных о приглашающем
             if (invitation.Inviter) {
               console.log('Информация о приглашающем:', {
@@ -73,7 +73,7 @@ const Invitations: React.FC = () => {
             }
           });
         }
-        
+
         setInvitations(data);
         setError(null);
       } catch (err: any) {
@@ -91,10 +91,10 @@ const Invitations: React.FC = () => {
   const handleInvitationResponse = async (id: string, status: 'accepted' | 'rejected') => {
     try {
       await invitationAPI.respond(id, status);
-      
+
       // Обновляем список приглашений
-      setInvitations(prevInvitations => 
-        prevInvitations.map(inv => 
+      setInvitations(prevInvitations =>
+        prevInvitations.map(inv =>
           inv.id === id ? { ...inv, status } : inv
         )
       );
@@ -116,17 +116,24 @@ const Invitations: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary-500 rounded-full border-t-transparent"></div>
+      <div className="flex justify-center py-4">
+        <div className="animate-spin h-6 w-6 border-3 border-primary-500 rounded-full border-t-transparent"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-8">
-        <p className="text-red-500 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Попробовать снова</Button>
+      <div className="text-center py-4">
+        <p className="text-red-500 mb-2 text-sm">Ошибка загрузки</p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => window.location.reload()}
+          className="text-xs"
+        >
+          Обновить
+        </Button>
       </div>
     );
   }
@@ -136,68 +143,79 @@ const Invitations: React.FC = () => {
 
   if (pendingInvitations.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-neutral-500">У вас нет активных приглашений</p>
+      <div className="text-center py-4">
+        <p className="text-neutral-500 text-sm">У вас нет активных приглашений</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-semibold mb-4">Приглашения в команду</h3>
-      
+    <div className="space-y-3">
       {pendingInvitations.map(invitation => (
-        <Card key={invitation.id} className="overflow-hidden border-none shadow-md">
-          <CardHeader className="bg-primary-50 pb-3">
-            <CardTitle className="text-lg font-medium text-primary-700">
-              <Users className="h-5 w-5 inline-block mr-2" />
-              Приглашение в команду {invitation.Team?.name || 'Неизвестная команда'}
+        <Card
+          key={invitation.id}
+          className="overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 rounded-xl"
+        >
+          <CardHeader className="bg-gradient-to-r from-primary-50 to-primary-100 pb-2 pt-3 px-3 border-b border-primary-100">
+            <CardTitle className="text-sm font-medium text-primary-800 truncate flex items-center">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary-500/10 mr-2 flex-shrink-0">
+                <Users className="h-3 w-3 text-primary-600" />
+              </div>
+              {invitation.Team?.name || 'Неизвестная команда'}
             </CardTitle>
           </CardHeader>
-          
-          <CardContent className="pt-4">
-            <div className="space-y-3">
-              <p className="text-neutral-700">
-                <strong>Соревнование:</strong> {invitation.Competition?.name || 'Неизвестное соревнование'}
+
+          <CardContent className="pt-3 pb-2 px-3 bg-white">
+            <div className="text-xs space-y-2">
+              <p className="text-neutral-800 font-medium truncate flex items-center bg-neutral-50 px-2 py-1 rounded-md">
+                <Info className="h-3 w-3 mr-1.5 text-primary-500 flex-shrink-0" />
+                {invitation.Competition?.name || 'Неизвестное соревнование'}
               </p>
-              
-              {invitation.Competition?.startdate && (
-                <p className="text-neutral-600 text-sm">
-                  <strong>Дата начала:</strong> {formatDate(invitation.Competition.startdate)}
-                </p>
-              )}
-              
-              <p className="text-neutral-600 text-sm">
-                <strong>Приглашение от:</strong> {
-                  invitation.Inviter?.user_info && (invitation.Inviter.user_info.lastName || invitation.Inviter.user_info.firstName) 
-                    ? `${invitation.Inviter.user_info.lastName || ''} ${invitation.Inviter.user_info.firstName || ''} ${invitation.Inviter.user_info.middleName || ''} (${invitation.Inviter.email})`
-                    : invitation.Inviter?.email 
-                      ? invitation.Inviter.email
-                      : `Пользователь #${invitation.InvitedBy || 'неизвестен'}`
-                }
-              </p>
-              
-              <p className="text-neutral-600 text-sm">
-                <strong>Получено:</strong> {formatDate(invitation.createdAt)}
-              </p>
+
+              <div className="grid grid-cols-1 gap-1.5 pl-1">
+                {invitation.Competition?.startdate && (
+                  <div className="flex items-center text-neutral-600 hover:text-primary-700 transition-colors">
+                    <Calendar className="h-3 w-3 mr-1.5 flex-shrink-0 text-primary-400" />
+                    <span className="truncate">{formatDate(invitation.Competition.startdate)}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center text-neutral-600 hover:text-primary-700 transition-colors">
+                  <User className="h-3 w-3 mr-1.5 flex-shrink-0 text-primary-400" />
+                  <span className="truncate">
+                    {invitation.Inviter?.user_info && (invitation.Inviter.user_info.lastName || invitation.Inviter.user_info.firstName)
+                      ? `${invitation.Inviter.user_info.lastName || ''} ${invitation.Inviter.user_info.firstName || ''}`
+                      : invitation.Inviter?.email
+                        ? invitation.Inviter.email
+                        : `Пользователь #${invitation.InvitedBy || 'неизвестен'}`}
+                  </span>
+                </div>
+
+                <div className="flex items-center text-neutral-600 hover:text-primary-700 transition-colors">
+                  <Clock className="h-3 w-3 mr-1.5 flex-shrink-0 text-primary-400" />
+                  <span className="truncate">{formatDate(invitation.createdAt)}</span>
+                </div>
+              </div>
             </div>
           </CardContent>
-          
-          <CardFooter className="bg-neutral-50 pt-3 flex justify-between">
+
+          <CardFooter className="bg-neutral-50 py-2 px-3 flex justify-between gap-2 border-t border-neutral-100">
             <Button
               variant="primary"
-              leftIcon={<Check className="h-4 w-4" />}
+              size="sm"
+              leftIcon={<Check className="h-3 w-3" />}
               onClick={() => handleInvitationResponse(invitation.id, 'accepted')}
-              className="w-full mr-2 bg-green-500 hover:bg-green-600"
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 py-0.5 text-xs h-7 shadow-sm hover:shadow transition-all rounded-md font-medium"
             >
               Принять
             </Button>
-            
+
             <Button
               variant="primary"
-              leftIcon={<X className="h-4 w-4" />}
+              size="sm"
+              leftIcon={<X className="h-3 w-3" />}
               onClick={() => handleInvitationResponse(invitation.id, 'rejected')}
-              className="w-full ml-2 bg-red-500 hover:bg-red-600"
+              className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 py-0.5 text-xs h-7 shadow-sm hover:shadow transition-all rounded-md font-medium"
             >
               Отклонить
             </Button>

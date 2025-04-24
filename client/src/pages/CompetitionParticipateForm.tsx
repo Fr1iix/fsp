@@ -1,946 +1,608 @@
-import React, { useEffect, useState } from 'react';
-import { useAuthStore } from '../store/authStore.ts';
-import api, { applicationAPI, invitationAPI } from '../utils/api';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
-import Button from '../components/ui/Button.tsx';
-import Badge from '../components/ui/Badge.tsx';
-import { CheckCircle, XCircle, RefreshCw, User, Calendar, AlertCircle, UserPlus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Users, User, Plus, X, ArrowLeft, CheckCircle2, AlertCircle, Trophy, Shield } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
+import { Competition, Team, CompetitionFormat, CompetitionDiscipline } from '../types';
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
+import Input from '../components/ui/Input';
+import Button from '../components/ui/Button';
+import { teamsAPI, competitionAPI, invitationAPI } from '../utils/api';
+import Badge from '../components/ui/Badge';
+import { motion } from 'framer-motion';
 
-interface ApplicationItem {
-  id: string;
-  UserId: string;
-  TeamId: string;
-  CompetitionId: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
-  UUID?: string;
-  User?: {
-    id: string;
-    email: string;
-    role?: string;
-    user_info?: {
-      firstName?: string;
-      lastName?: string;
-      middleName?: string;
-      phone?: string;
-    }
-  };
-  Team?: {
-    id: string;
-    name: string;
-    discription?: string;
-    points?: number;
-    result?: number;
-    competitionId?: string;
-    members?: Array<{
-      userId: string;
-      firstName: string;
-      lastName: string;
-      isCapitan?: boolean;
-    }>;
-  };
-  Competition?: {
-    id: string;
-    name: string;
-    title?: string;
-    discription?: string;
-    discipline?: string;
-    format?: string;
-    startdate?: string;
-    enddate?: string;
-    maxParticipants?: number;
-    status?: string;
-    regionId?: string;
-    AddressId?: string;
-  };
-}
+// Адаптер для преобразования данных сервера в формат фронтенда
+const adaptCompetition = (serverCompetition: any): Competition => {
+  console.log('Обрабатываем соревнование с сервера:', serverCompetition);
 
-// Интерфейс для приглашений участников команды
-interface InvitationItem {
-  id: string;
-  TeamId: string;
-  UserId: string;
-  InvitedBy: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  CompetitionId: string;
-  createdAt: string;
-  User?: {
-    id: string;
-    email: string;
-    user_info?: {
-      firstName?: string;
-      lastName?: string;
-      middleName?: string;
-      phone?: string;
-    }
-  };
-  Inviter?: {
-    id: string;
-    email: string;
-    user_info?: {
-      firstName?: string;
-      lastName?: string;
-      middleName?: string;
-      phone?: string;
-    }
-  };
-}
+  // Проверка наличия необходимых полей
+  if (!serverCompetition || !serverCompetition.id) {
+    console.error('Получено некорректное соревнование:', serverCompetition);
+    throw new Error('Некорректные данные соревнования');
+  }
 
-interface TeamMember {
-  id?: string;
-  userId?: string;
-  UserId?: string;
-  isCapitan?: boolean;
-  is_capitan?: boolean;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  User?: {
-    id: string;
-    email: string;
-    user_info?: {
-      firstName?: string;
-      lastName?: string;
-      phone?: string;
-    }
+  const result = {
+    id: serverCompetition.id.toString(),
+    title: serverCompetition.name || 'Без названия',
+    description: serverCompetition.discription || 'Без описания',
+    format: serverCompetition.format as CompetitionFormat || 'regional',
+    discipline: serverCompetition.type as CompetitionDiscipline || 'product',
+    registrationStart: serverCompetition.startdate || new Date().toISOString(),
+    registrationEnd: serverCompetition.enddate || new Date().toISOString(),
+    startDate: serverCompetition.startdate_cometition || serverCompetition.startdate || new Date().toISOString(),
+    endDate: serverCompetition.enddate_cometition || serverCompetition.enddate || new Date().toISOString(),
+    status: mapServerStatus(serverCompetition.status),
+    createdBy: serverCompetition.createdBy || '',
+    region: serverCompetition.regionId ? [serverCompetition.regionId.toString()] : [],
+    maxParticipants: serverCompetition.maxParticipants || 0,
+    createdAt: serverCompetition.createdAt || new Date().toISOString(),
+    updatedAt: serverCompetition.updatedAt || new Date().toISOString()
   };
-}
 
-const CompetitionApplicationsPage: React.FC = () => {
-  const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-  // Состояние для хранения приглашений команд
-  const [teamInvitations, setTeamInvitations] = useState<Record<string, InvitationItem[] | null>>({});
+  console.log('Преобразованное соревнование:', result);
+  return result;
+};
+
+// Преобразование статуса с сервера в формат фронтенда
+const mapServerStatus = (serverStatus: string): "draft" | "registration" | "in_progress" | "completed" | "cancelled" => {
+  const statusMap: Record<string, any> = {
+    'Регистрация открыта': 'registration',
+    'В процессе': 'in_progress',
+    'Завершено': 'completed',
+    'Отменено': 'cancelled',
+    'Черновик': 'draft'
+  };
+
+  return statusMap[serverStatus] || 'registration';
+};
+
+const CompetitionParticipateForm: React.FC = () => {
+  const { id: competitionId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  // Добавим функцию для прямого запроса всех заявок (для отладки)
-  const fetchAllApplicationsDirectly = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      console.log('Загрузка всех заявок напрямую (режим отладки)');
-      // Прямой запрос к API без использования хелпера
-      const response = await api.get('/applications');
-      console.log('Получен прямой ответ:', response.data);
+  const [competition, setCompetition] = useState<Competition | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-      // Устанавливаем полученные заявки в состояние
-      setApplications(response.data);
-    } catch (error: any) {
-      console.error('Ошибка при прямой загрузке заявок:', error);
+  // Состояние для формы создания команды
+  const [teamName, setTeamName] = useState('');
+  const [teamDescription, setTeamDescription] = useState('');
+  const [participants, setParticipants] = useState<string[]>(['']); // Начинаем с одного пустого поля
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [teamCreationSuccess, setTeamCreationSuccess] = useState(false);
+  const [teamCreationError, setTeamCreationError] = useState<string | null>(null);
 
-      if (error.response) {
-        console.error('Статус ошибки:', error.response.status);
-        console.error('Данные ошибки:', error.response.data);
-        setError(`Ошибка ${error.response.status}: ${error.response.data?.message || 'Не удалось загрузить заявки'}`);
-      } else {
-        setError('Не удалось загрузить заявки. Пожалуйста, попробуйте позже.');
+  // Новые состояния для поиска участников
+  const [lookingForMembers, setLookingForMembers] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState(0);
+  const [requiredRoles, setRequiredRoles] = useState('');
+
+  // Загрузка данных о соревновании
+  useEffect(() => {
+    const fetchCompetition = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Получаем список всех соревнований, а затем находим нужное по ID
+        console.log(`Получаем соревнование с ID: ${competitionId}`);
+        const allCompetitions = await competitionAPI.getAll();
+        console.log('Получены соревнования:', allCompetitions);
+
+        // Ищем нужное соревнование и адаптируем его
+        const foundCompetition = allCompetitions.find(comp =>
+          comp.id.toString() === competitionId?.toString()
+        );
+
+        if (foundCompetition) {
+          console.log('Найдено соревнование:', foundCompetition);
+          const adaptedCompetition = adaptCompetition(foundCompetition);
+          setCompetition(adaptedCompetition);
+        } else {
+          console.error('Соревнование не найдено в списке');
+          setError('Соревнование не найдено');
+        }
+      } catch (error) {
+        console.error('Error fetching competition:', error);
+        setError('Не удалось загрузить информацию о соревновании');
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setIsLoading(false);
+    };
+
+    if (competitionId) {
+      fetchCompetition();
     }
+  }, [competitionId]);
+
+  // Функция для добавления нового поля участника
+  const addParticipantField = () => {
+    setParticipants([...participants, '']);
   };
 
-  const fetchApplications = async () => {
-    setIsLoading(true);
-    setError(null);
+  // Функция для удаления поля участника
+  const removeParticipantField = (index: number) => {
+    const newParticipants = [...participants];
+    newParticipants.splice(index, 1);
+    setParticipants(newParticipants);
+  };
+
+  // Функция для обновления значения поля участника
+  const updateParticipant = (index: number, value: string) => {
+    const newParticipants = [...participants];
+    newParticipants[index] = value;
+    setParticipants(newParticipants);
+  };
+
+  // Обработчик отправки формы
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!teamName.trim()) {
+      setTeamCreationError('Необходимо указать название команды');
+      return;
+    }
+
+    // Фильтруем пустые идентификаторы участников
+    const validParticipants = participants.filter(p => p.trim() !== '');
+
     try {
-      // Проверяем наличие токена перед запросом
-      const token = localStorage.getItem('token');
-      console.log('Токен аутентификации:', token ? 'Присутствует' : 'Отсутствует');
+      setCreatingTeam(true);
+      setTeamCreationError(null);
 
-      if (!token) {
-        setError('Требуется авторизация. Пожалуйста, войдите в систему.');
-        setIsLoading(false);
-        return;
-      }
+      // 1. Создаем команду
+      const teamData = {
+        name: teamName,
+        discription: teamDescription,
+        CompetitionId: competitionId ?? '',
+        points: 0,
+        result: 0,
+        teammembersId: null,
+        lookingForMembers: lookingForMembers,
+        availableSlots: lookingForMembers ? availableSlots : 0,
+        requiredRoles: lookingForMembers ? requiredRoles : ''
+      };
 
-      console.log('Загрузка заявок для пользователя:', user?.id, 'с ролью:', user?.role);
-      console.log('Отправка запроса к API...');
+      console.log('Отправка запроса на создание команды:', teamData);
+      const createdTeam = await teamsAPI.create(teamData);
+      console.log('Команда успешно создана:', createdTeam);
 
-      // Используем applicationAPI вместо прямого вызова api
-      const applications = await applicationAPI.getAll();
-      console.log('Получены заявки:', applications);
-
-      // Выводим подробную информацию о каждой заявке для отладки
-      applications.forEach((app: ApplicationItem, index: number) => {
-        console.log(`Заявка ${index + 1}:`, {
-          id: app.id,
-          status: app.status,
-          userId: app.UserId,
-          teamId: app.TeamId,
-          competitionId: app.CompetitionId,
+      // 2. Добавляем текущего пользователя как капитана
+      if (user && createdTeam.id) {
+        console.log('Добавление капитана:', {
+          UserId: user.id,
+          TeamId: createdTeam.id,
+          is_capitan: true
         });
 
-        // Более подробная отладка информации о команде
-        if (app.Team) {
-          console.log(`  Команда:`, {
-            id: app.Team.id,
-            name: app.Team.name,
-            description: app.Team.discription,
-            competitionId: app.Team.competitionId,
-            members: app.Team.members
+        try {
+          await teamsAPI.addMember({
+            UserId: user.id,
+            TeamId: createdTeam.id,
+            is_capitan: true
           });
-        } else {
-          console.log(`  Команда: данные отсутствуют (TeamId=${app.TeamId})`);
+          console.log('Капитан команды добавлен');
+        } catch (memberError: any) {
+          console.error('Ошибка при добавлении капитана:', memberError);
+          throw new Error('Не удалось добавить капитана команды: ' + (memberError.message || 'Неизвестная ошибка'));
         }
+      }
 
-        // Более подробная отладка информации о соревновании
-        if (app.Competition) {
-          console.log(`  Соревнование:`, {
-            id: app.Competition.id,
-            name: app.Competition.name,
-            title: app.Competition.title,
-            discipline: app.Competition.discipline,
-            format: app.Competition.format
-          });
-        } else {
-          console.log(`  Соревнование: данные отсутствуют (CompetitionId=${app.CompetitionId})`);
+      // 3. Отправляем приглашения остальным участникам если есть
+      if (validParticipants.length > 0) {
+        for (const participantId of validParticipants) {
+          console.log(`Отправка приглашения участнику ${participantId} для команды ${createdTeam.id}`);
+          try {
+            await invitationAPI.create({
+              UserId: participantId,
+              TeamId: createdTeam.id,
+              CompetitionId: competitionId ?? ''
+            });
+            console.log('Приглашение успешно отправлено');
+          } catch (inviteError: any) {
+            console.error('Ошибка при отправке приглашения:', inviteError);
+            // Здесь можно добавить логику обработки ошибки, например, показать уведомление
+          }
         }
-
-        // Более подробная отладка информации о пользователе
-        if (app.User) {
-          console.log(`  Пользователь:`, {
-            id: app.User.id,
-            email: app.User.email,
-            role: app.User.role,
-            firstName: app.User.user_info?.firstName,
-            lastName: app.User.user_info?.lastName
-          });
-        } else {
-          console.log(`  Пользователь: данные отсутствуют (UserId=${app.UserId})`);
-        }
-      });
-
-      // Устанавливаем полученные заявки в состояние
-      setApplications(applications);
-    } catch (error: any) {
-      console.error('Ошибка при загрузке заявок:', error);
-
-      // Более детальное логирование ошибки
-      if (error.response) {
-        console.error('Статус ошибки:', error.response.status);
-        console.error('Данные ошибки:', error.response.data);
-        setError(`Ошибка ${error.response.status}: ${error.response.data?.message || 'Не удалось загрузить заявки'}`);
-      } else if (error.request) {
-        console.error('Нет ответа от сервера:', error.request);
-        setError('Сервер не отвечает. Проверьте соединение.');
-      } else {
-        console.error('Сообщение об ошибке:', error.message);
-        setError('Не удалось загрузить заявки. Пожалуйста, попробуйте позже.');
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Функция для обновления статуса заявки
-  const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
-    try {
-      // Используем applicationAPI вместо прямого вызова api
-      await applicationAPI.updateStatus(id, status);
-
-      // Обновляем локальный список заявок
-      setApplications(prevApplications =>
-        prevApplications.map(app =>
-          app.id === id ? { ...app, status } : app
-        )
-      );
-
-      // Показываем сообщение об успешном обновлении
-      alert(`Заявка ${status === 'approved' ? 'подтверждена' : 'отклонена'}`);
-    } catch (error: any) {
-      console.error('Ошибка при обновлении статуса заявки:', error);
-
-      // Более детальное логирование ошибки
-      if (error.response) {
-        console.error('Статус ошибки:', error.response.status);
-        console.error('Данные ошибки:', error.response.data);
-        alert(`Ошибка ${error.response.status}: ${error.response.data?.message || 'Не удалось обновить статус'}`);
-      } else {
-        alert('Не удалось обновить статус заявки');
-      }
-    }
-  };
-
-  // Функция для отображения информации о приглашениях
-  const renderInvitations = (teamId: string) => {
-    // Проверяем, загружены ли данные для этой команды
-    if (teamInvitations[teamId] === undefined) {
-      return (
-        <p className="text-sm text-neutral-500 italic">Загрузка приглашений...</p>
-      );
-    }
-
-    const invitations = teamInvitations[teamId];
-
-    // Проверяем, есть ли у нас права на просмотр
-    if (invitations === null) {
-      return (
-        <p className="text-sm text-neutral-500 italic">Нет прав для просмотра приглашений</p>
-      );
-    }
-
-    // Если нет приглашений
-    if (invitations.length === 0) {
-      return (
-        <p className="text-sm text-neutral-500 italic">Нет активных приглашений</p>
-      );
-    }
-
-    return (
-      <div>
-        <ul className="text-sm text-neutral-600 list-disc pl-5">
-          {invitations.map((invitation) => {
-            // Получаем информацию о пользователе
-            const user = invitation.User;
-            const userInfo = user?.user_info;
-
-            // Формируем ФИО
-            const fullName = userInfo && (userInfo.lastName || userInfo.firstName || userInfo.middleName)
-              ? `${userInfo.lastName || ''} ${userInfo.firstName || ''} ${userInfo.middleName || ''}`.trim()
-              : '';
-
-            // Получаем email и телефон
-            const email = user?.email || '';
-            const phone = userInfo?.phone || '';
-
-            // Получаем статус для отображения
-            const statusBadge = invitation.status === 'pending'
-              ? <Badge className="bg-yellow-500 text-xs">Ожидает ответа</Badge>
-              : invitation.status === 'accepted'
-                ? <Badge className="bg-green-500 text-xs">Принято</Badge>
-                : <Badge className="bg-red-500 text-xs">Отклонено</Badge>;
-
-            return (
-              <li key={invitation.id} className="mb-3 border-b pb-2 border-gray-100 last:border-0">
-                {/* Если есть ФИО, email или телефон - выводим их, иначе только ID */}
-                {(fullName || email || phone) ? (
-                  <>
-                    {fullName && (
-                      <div>
-                        <span className="font-medium">{fullName}</span>
-                      </div>
-                    )}
-
-                    <div className="text-xs text-neutral-500 mt-0.5 flex flex-col">
-                      {email && (
-                        <span>Email: {email}</span>
-                      )}
-                      {phone && (
-                        <span>Телефон: {phone}</span>
-                      )}
-                      <span>ID: {invitation.UserId}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <span className="font-medium">Пользователь ID: {invitation.UserId}</span>
-                  </div>
-                )}
-
-                <div className="mt-1">
-                  {statusBadge}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    );
-  };
-
-  // Загружаем заявки при монтировании компонента
-  useEffect(() => {
-    const loadData = async () => {
-      await fetchApplications();
-
-      // После загрузки заявок загружаем приглашения для всех команд
-      const teamIds = applications
-        .filter(app => app.TeamId)
-        .map(app => app.TeamId);
-
-      const uniqueTeamIds = [...new Set(teamIds)];
-      console.log('Загрузка приглашений для команд:', uniqueTeamIds);
-
-      // Загружаем приглашения для каждой команды
-      for (const teamId of uniqueTeamIds) {
-        await fetchTeamInvitations(teamId);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  // Функция форматирования даты
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  // Получение значка статуса
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge className="bg-yellow-500">На модерации</Badge>;
-      case 'approved':
-        return <Badge className="bg-green-500">Подтверждена</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-500">Отклонена</Badge>;
-      default:
-        return <Badge className="bg-gray-500">Неизвестно</Badge>;
-    }
-  };
-
-  // Функция получения информации о соревновании
-  const getCompetitionInfo = (competition?: any) => {
-    if (!competition) {
-      return {
-        name: 'Соревнование не указано',
-        dates: '',
-        description: '',
-        format: '',
-        discipline: ''
-      };
-    }
-
-    // Определяем название (может быть в поле name или title)
-    const name = competition.title || competition.name || 'Соревнование без названия';
-
-    // Форматируем даты
-    let dates = '';
-    if (competition.startdate_cometition && competition.enddate_cometition) {
-      dates = `${formatDate(competition.startdate_cometition)} - ${formatDate(competition.enddate_cometition)}`;
-    } else if (competition.startdate && competition.enddate) {
-      dates = `${formatDate(competition.startdate)} - ${formatDate(competition.enddate)}`;
-    } else if (competition.startdate) {
-      dates = formatDate(competition.startdate);
-    }
-
-    return {
-      id: competition.id,
-      name,
-      dates,
-      description: competition.discription || competition.description || '',
-      format: competition.format || '',
-      discipline: competition.discipline || ''
-    };
-  };
-
-  // Получение команды и ее участников
-  const getTeamInfo = (team?: any, teamId?: string) => {
-    if (!team) {
-      return {
-        name: teamId ? `Команда ID:${teamId}` : 'Команда не указана',
-        members: [] as TeamMember[]
-      };
-    }
-
-    const members = team.Teammembers || team.members || [];
-    const teamMembers = members.map((member: any): TeamMember => {
-      // Если участник является объектом Teammember, берем данные из связанного User
-      if (member.User) {
-        return {
-          id: member.User.id,
-          isCapitan: member.is_capitan,
-          firstName: member.User.user_info?.firstName || '',
-          lastName: member.User.user_info?.lastName || '',
-          email: member.User.email,
-          phone: member.User.user_info?.phone || ''
+      // 4. Создаем заявку на участие в соревновании
+      if (user && createdTeam.id) {
+        const applicationData = {
+          UserId: user.id,
+          TeamId: createdTeam.id,
+          CompetitionId: competitionId ?? '',
+          status: 'pending'
         };
+
+        console.log('Отправка заявки на участие в соревновании:', applicationData);
+        await teamsAPI.submitApplication(applicationData);
+        console.log('Заявка успешно отправлена');
       }
 
-      // Если участник уже преобразован в плоскую структуру
-      return {
-        id: member.userId || member.UserId,
-        isCapitan: member.isCapitan || member.is_capitan,
-        firstName: member.firstName || '',
-        lastName: member.lastName || '',
-        email: member.email || '',
-        phone: member.phone || ''
-      };
-    });
-
-    return {
-      name: team.name || 'Без названия',
-      id: team.id,
-      description: team.discription || team.description || '',
-      members: teamMembers
-    };
-  };
-
-  // Функция получения имени пользователя
-  const getUserName = (user?: any) => {
-    if (!user) return 'Пользователь не указан';
-
-    // Проверяем наличие user_info и данных в нем
-    if (user.user_info && (user.user_info.lastName || user.user_info.firstName)) {
-      // Формируем ФИО из имеющихся данных
-      let name = '';
-
-      if (user.user_info.lastName) {
-        name += user.user_info.lastName;
-      }
-
-      if (user.user_info.firstName) {
-        name += name ? ' ' + user.user_info.firstName : user.user_info.firstName;
-      }
-
-      if (user.user_info.middleName) {
-        name += name ? ' ' + user.user_info.middleName : user.user_info.middleName;
-      }
-
-      // Добавляем email в скобках, если он есть
-      if (user.email) {
-        name += ` (${user.email})`;
-      }
-
-      return name;
-    }
-
-    // Если нет имени/фамилии, возвращаем email
-    return user.email || 'Без имени';
-  };
-
-  const renderTeamDetails = (team?: any) => {
-    if (!team) return 'Команда не найдена';
-
-    let result = `Название: ${team.name || 'Не указано'}\n`;
-    result += `ID: ${team.id}\n`;
-
-    if (team.discription || team.description) {
-      result += `Описание: ${team.discription || team.description || ''}\n`;
-    }
-
-    if (team.members && team.members.length > 0) {
-      result += '\nУчастники команды:\n';
-      team.members.forEach((member: any, idx: number) => {
-        // Формируем полное имя
-        const fullName = member.lastName || member.firstName
-          ? `${member.lastName || ''} ${member.firstName || ''}`.trim()
-          : '';
-
-        const memberId = member.id || member.userId || member.UserId || 'Не указан';
-        const email = member.email || '';
-        const phone = member.phone || '';
-
-        // Если есть данные ФИО, email или телефон - выводим их
-        if (fullName || email || phone) {
-          result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}`;
-
-          if (fullName) {
-            result += `${fullName}\n`;
-          } else {
-            result += `Участник ID: ${memberId}\n`;
-          }
-
-          if (email) {
-            result += `  Email: ${email}\n`;
-          }
-
-          if (phone) {
-            result += `  Телефон: ${phone}\n`;
-          }
-
-          result += `  ID: ${memberId}\n`;
-        } else {
-          // Если нет данных, выводим только ID
-          result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}Участник ID: ${memberId}\n`;
-        }
-      });
-    }
-
-    return result;
-  };
-
-  // Функция для загрузки приглашений команды
-  const fetchTeamInvitations = async (teamId: string) => {
-    try {
-      console.log(`Загрузка приглашений для команды ID: ${teamId}`);
-
-      // API запрос для получения приглашений команды через invitationAPI
-      const invitations = await invitationAPI.getTeamInvitations(teamId);
-
-      // Добавляем подробный отладочный вывод для проверки данных пользователей
-      console.log(`Получено ${invitations.length} приглашений для команды ${teamId}`);
-      invitations.forEach((invitation: InvitationItem, index: number) => {
-        console.log(`[Отладка] Приглашение ${index + 1}:`, invitation);
-
-        if (invitation.User) {
-          console.log(`[Отладка] Пользователь:`, {
-            id: invitation.User.id,
-            email: invitation.User.email,
-            user_info: invitation.User.user_info
-          });
-        } else {
-          console.log(`[Отладка] Данные пользователя отсутствуют для ID: ${invitation.UserId}`);
-        }
-      });
-
-      // Обновляем состояние
-      setTeamInvitations(prev => ({
-        ...prev,
-        [teamId]: invitations
-      }));
-
-      return invitations;
-    } catch (error: any) {
-      // Проверяем, является ли ошибка ошибкой доступа (403)
-      if (error.response && error.response.status === 403) {
-        console.log(`Нет прав для просмотра приглашений команды ${teamId}: ${error.response.data.message}`);
-
-        // Устанавливаем null для этой команды, чтобы UI показал сообщение об отсутствии прав
-        setTeamInvitations(prev => ({
-          ...prev,
-          [teamId]: null
-        }));
-      } else {
-        console.error(`Ошибка при загрузке приглашений для команды ${teamId}:`, error);
-
-        // При других ошибках устанавливаем пустой массив
-        setTeamInvitations(prev => ({
-          ...prev,
-          [teamId]: []
-        }));
-      }
-      return [];
+      setTeamCreationSuccess(true);
+    } catch (err: any) {
+      console.error('Ошибка при создании команды:', err);
+      setTeamCreationError(err.message || 'Ошибка при создании команды');
+    } finally {
+      setCreatingTeam(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="container mx-auto max-w-5xl px-4 py-8 pt-24">
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Заявки команд на соревнования</h1>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex items-center gap-2"
-                onClick={fetchApplications}
-                disabled={isLoading}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Обновить
-              </Button>
-
-              {/* Кнопка для отладки - загрузка всех заявок */}
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-800"
-                onClick={fetchAllApplicationsDirectly}
-                disabled={isLoading}
-              >
-                <AlertCircle className="h-4 w-4" />
-                Загрузить все заявки (отладка)
-              </Button>
-
-              {/* Кнопка для отображения отладочной информации */}
-              <Button
-                variant="outline"
-                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-800"
-                onClick={() => setShowDebugInfo(!showDebugInfo)}
-              >
-                {showDebugInfo ? 'Скрыть отладку' : 'Показать отладку'}
-              </Button>
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-24">
+        <div className="container mx-auto max-w-4xl px-4 py-8">
+          <div className="flex justify-center py-16">
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 rounded-full border-t-4 border-primary-500 animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-2 border-primary-200"></div>
+              <div className="absolute inset-0 flex items-center justify-center text-primary-600 font-semibold">
+                <Users className="h-8 w-8 opacity-75" />
+              </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Отладочная информация */}
-          {showDebugInfo && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 text-sm">
-              <h3 className="font-bold mb-2 text-gray-700">Отладочная информация:</h3>
-              <p><strong>Пользователь ID:</strong> {user?.id}</p>
-              <p><strong>Роль:</strong> {user?.role}</p>
-              <p><strong>Токен:</strong> {localStorage.getItem('token') ? 'Присутствует' : 'Отсутствует'}</p>
-              <p><strong>Загружено заявок:</strong> {applications.length}</p>
+  if (error || !competition) {
+    return (
+      <div className="min-h-screen pt-24">
+        <div className="container mx-auto max-w-4xl px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center py-16"
+          >
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-50 flex items-center justify-center">
+              <AlertCircle className="h-10 w-10 text-red-500" />
             </div>
-          )}
+            <p className="text-xl text-neutral-600 mb-4">{error || 'Соревнование не найдено'}</p>
+            <Button
+              variant="outline"
+              leftIcon={<ArrowLeft className="h-4 w-4" />}
+              onClick={() => navigate('/competitions')}
+              className="shadow-sm hover:shadow-md transition-shadow duration-300"
+            >
+              Вернуться к списку соревнований
+            </Button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
 
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin h-12 w-12 border-4 border-primary-500 rounded-full border-t-transparent"></div>
-            </div>
-          ) : error ? (
-            <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-              {error}
-            </div>
-          ) : applications.length === 0 ? (
-            <div className="text-center py-12 text-neutral-500">
-              <div className="bg-neutral-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="h-12 w-12 text-neutral-300" />
+  // Проверяем, открыта ли регистрация
+  const isRegistrationOpen = competition.status === 'registration';
+
+  if (!isRegistrationOpen) {
+    return (
+      <div className="min-h-screen pt-24">
+        <div className="container mx-auto max-w-4xl px-4 py-8">
+          <div className="mb-6">
+            <Button
+              variant="outline"
+              leftIcon={<ArrowLeft className="h-4 w-4" />}
+              onClick={() => navigate(`/competitions/${competitionId}`)}
+              className="shadow-sm hover:shadow-md transition-shadow duration-300"
+            >
+              Вернуться к соревнованию
+            </Button>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Card className="border-0 shadow-xl rounded-xl overflow-hidden">
+              <div className="h-2 bg-gradient-to-r from-red-400 to-red-600"></div>
+              <CardHeader className="bg-white">
+                <CardTitle>Регистрация на соревнование</CardTitle>
+              </CardHeader>
+              <CardContent className="bg-white">
+                <div className="py-8 text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+                    <AlertCircle className="h-8 w-8 text-red-500" />
+                  </div>
+                  <Badge variant="error" className="mb-4 px-4 py-1 text-sm">Регистрация закрыта</Badge>
+                  <p className="text-neutral-600 max-w-md mx-auto">
+                    К сожалению, регистрация на данное соревнование уже закрыта или еще не открыта.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen pt-24">
+      <div className="container mx-auto max-w-4xl px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mb-6"
+        >
+          <Button
+            variant="outline"
+            leftIcon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => navigate(`/competitions/${competitionId}`)}
+            className="shadow-sm hover:shadow-md transition-shadow duration-300"
+          >
+            Вернуться к соревнованию
+          </Button>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold mb-2 text-neutral-800 flex items-center">
+            <Trophy className="h-8 w-8 text-amber-500 mr-3" />
+            Участие в соревновании
+          </h1>
+          <p className="text-neutral-500 text-lg pl-11">{competition.title}</p>
+        </motion.div>
+
+        {teamCreationSuccess ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="border-0 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm">
+              <div className="h-2 bg-gradient-to-r from-green-400 to-emerald-600"></div>
+              <CardContent className="py-16 bg-white">
+                <div className="text-center">
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      duration: 0.5,
+                      delay: 0.3,
+                      type: "spring",
+                      stiffness: 200
+                    }}
+                    className="w-28 h-28 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center rounded-full mx-auto mb-8 shadow-lg"
+                  >
+                    <CheckCircle2 className="h-14 w-14 text-emerald-600" />
+                  </motion.div>
+                  <h2 className="text-3xl font-bold text-neutral-800 mb-4">Заявка отправлена!</h2>
+                  <p className="text-neutral-600 mb-10 max-w-lg mx-auto text-lg">
+                    Ваша заявка на участие в соревновании успешно отправлена и ожидает подтверждения участниками команды.
+                  </p>
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate(`/competitions/${competitionId}`)}
+                    className="px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300 rounded-full"
+                  >
+                    Вернуться к соревнованию
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card className="border-0 shadow-2xl rounded-2xl overflow-hidden backdrop-blur-sm relative">
+              <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+                <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-blue-500 blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full bg-indigo-500 blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
               </div>
-              <p className="text-lg font-medium mb-2 text-neutral-700">Заявок пока нет</p>
-              <p className="text-sm max-w-md mx-auto">Здесь будут отображаться заявки команд на соревнования</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {applications.map((application) => (
-                <Card key={application.id} className="overflow-hidden !bg-white border border-neutral-200">
-                  <CardHeader className="bg-neutral-50 py-4">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                      <div>
-                        <CardTitle className="text-lg font-semibold">
-                          {getCompetitionInfo(application.Competition).name}
-                        </CardTitle>
-                        {application.Competition && getCompetitionInfo(application.Competition).dates && (
-                          <p className="text-sm text-neutral-500 mt-1">
-                            {getCompetitionInfo(application.Competition).dates}
+
+              <CardHeader className="bg-white border-b border-slate-100 relative z-10">
+                <CardTitle className="flex items-center text-xl">
+                  <Shield className="h-6 w-6 mr-3 text-indigo-600" />
+                  Создание команды
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="bg-white pt-8 relative z-10">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-base font-medium text-neutral-700 mb-2">
+                        Название команды*
+                      </label>
+                      <Input
+                        value={teamName}
+                        onChange={(e) => setTeamName(e.target.value)}
+                        placeholder="Введите название команды"
+                        className="w-full shadow-sm focus:ring-2 focus:ring-indigo-500 transition-shadow duration-300 text-base py-3"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-base font-medium text-neutral-700 mb-2">
+                        Описание команды
+                      </label>
+                      <textarea
+                        value={teamDescription}
+                        onChange={(e) => setTeamDescription(e.target.value)}
+                        placeholder="Кратко опишите вашу команду"
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 text-base"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Секция: Поиск участников */}
+                  <div
+                    className={`p-6 rounded-2xl border shadow-md transition-all duration-300 ${lookingForMembers
+                      ? "bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-50 border-indigo-200"
+                      : "bg-slate-50 border-slate-200 hover:border-indigo-200"
+                      }`}
+                  >
+                    <div className="flex items-center mb-4">
+                      <input
+                        type="checkbox"
+                        id="lookingForMembers"
+                        checked={lookingForMembers}
+                        onChange={(e) => setLookingForMembers(e.target.checked)}
+                        className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-neutral-300 rounded-md cursor-pointer"
+                      />
+                      <label htmlFor="lookingForMembers" className="ml-3 block text-base font-medium text-neutral-800 cursor-pointer">
+                        Требуются спортсмены
+                      </label>
+                    </div>
+
+                    {lookingForMembers && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4 pl-8 pt-2"
+                      >
+                        <div>
+                          <label className="block text-base font-medium text-neutral-700 mb-2">
+                            Количество свободных мест
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={availableSlots}
+                            onChange={(e) => setAvailableSlots(parseInt(e.target.value) || 0)}
+                            className="w-full px-4 py-3 border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 text-base"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-base font-medium text-neutral-700 mb-2">
+                            Требуемые роли / специализации
+                          </label>
+                          <textarea
+                            value={requiredRoles}
+                            onChange={(e) => setRequiredRoles(e.target.value)}
+                            placeholder="Например: разработчик бэкенда, дизайнер интерфейса, тестировщик и т.д."
+                            className="w-full px-4 py-3 border border-neutral-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 text-base"
+                            rows={2}
+                          />
+                          <p className="text-sm text-neutral-500 mt-2 italic">
+                            Укажите, какие специалисты вам нужны. Эта информация будет отображаться в списке команд, ищущих участников.
                           </p>
-                        )}
-                      </div>
-                      {getStatusBadge(application.status)}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Информация о команде */}
-                      <div>
-                        <h3 className="text-md font-semibold mb-3">Информация о команде</h3>
-                        <div className="space-y-2">
-                          {(() => {
-                            const teamInfo = getTeamInfo(application.Team, application.TeamId);
-                            return (
-                              <>
-                                <p className="text-sm text-neutral-600">
-                                  <span className="font-medium">Название команды:</span> {teamInfo.name}
-                                </p>
-                                <p className="text-sm text-neutral-600">
-                                  <span className="font-medium">ID Команды:</span> {application.TeamId || 'Не указано'}
-                                </p>
-                                {teamInfo.description && (
-                                  <p className="text-sm text-neutral-600">
-                                    <span className="font-medium">Описание команды:</span> {teamInfo.description}
-                                  </p>
-                                )}
-                                {teamInfo.members && teamInfo.members.length > 0 && (
-                                  <div>
-                                    <p className="text-sm font-medium text-neutral-600">Участники команды:</p>
-                                    <ul className="text-sm text-neutral-600 list-disc pl-5 mt-1">
-                                      {teamInfo.members.map((member: TeamMember, index: number) => {
-                                        // Формируем полное имя
-                                        const fullName = member.lastName || member.firstName
-                                          ? `${member.lastName || ''} ${member.firstName || ''}`.trim()
-                                          : '';
-
-                                        // Определяем ID участника
-                                        const memberId = member.id || member.userId || member.UserId || `Не указан`;
-
-                                        // Получаем email и телефон
-                                        const email = member.email || '';
-                                        const phone = member.phone || '';
-
-                                        return (
-                                          <li key={index} className="mb-2 border-b pb-2 border-gray-100 last:border-0">
-                                            {/* Если есть имя, email или телефон - выводим их, иначе только ID */}
-                                            {(fullName || email || phone) ? (
-                                              <>
-                                                {fullName && (
-                                                  <div>
-                                                    {(member.isCapitan || member.is_capitan) && '👑 '}
-                                                    <span className="font-medium">{fullName}</span>
-                                                  </div>
-                                                )}
-
-                                                <div className="text-xs text-neutral-500 mt-0.5 flex flex-col">
-                                                  {email && (
-                                                    <span>Email: {email}</span>
-                                                  )}
-                                                  {phone && (
-                                                    <span>Телефон: {phone}</span>
-                                                  )}
-                                                  <span>ID: {memberId}</span>
-                                                </div>
-                                              </>
-                                            ) : (
-                                              <div>
-                                                {(member.isCapitan || member.is_capitan) && '👑 '}
-                                                <span className="font-medium">Участник ID: {memberId}</span>
-                                              </div>
-                                            )}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                {/* Добавляем блок с приглашениями */}
-                                {application.TeamId && (
-                                  <div className="mt-4">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-sm font-medium text-neutral-600">Приглашения:</p>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs py-1 px-2 h-7"
-                                        onClick={() => fetchTeamInvitations(application.TeamId)}
-                                      >
-                                        <RefreshCw className="h-3 w-3 mr-1" />
-                                        Обновить
-                                      </Button>
-                                    </div>
-
-                                    <div className="mt-2">
-                                      {teamInvitations[application.TeamId] === undefined ? (
-                                        <p className="text-sm text-neutral-500 italic">Загрузка приглашений...</p>
-                                      ) : renderInvitations(application.TeamId)}
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
                         </div>
-                      </div>
+                      </motion.div>
+                    )}
+                  </div>
 
-                      {/* Информация о соревновании и капитане */}
-                      <div>
-                        <h3 className="text-md font-semibold mb-3">Информация о соревновании</h3>
-                        <div className="space-y-2">
-                          {(() => {
-                            const competitionInfo = getCompetitionInfo(application.Competition);
-                            return (
-                              <>
-                                <p className="text-sm text-neutral-600">
-                                  <span className="font-medium">Название:</span> {competitionInfo.name}
-                                </p>
-                                <p className="text-sm text-neutral-600">
-                                  <span className="font-medium">ID соревнования:</span> {application.CompetitionId || 'Не указано'}
-                                </p>
-                                {competitionInfo.description && (
-                                  <p className="text-sm text-neutral-600">
-                                    <span className="font-medium">Описание:</span> {competitionInfo.description}
-                                  </p>
-                                )}
-                                {competitionInfo.format && (
-                                  <p className="text-sm text-neutral-600">
-                                    <span className="font-medium">Формат:</span> {competitionInfo.format}
-                                  </p>
-                                )}
-                                {competitionInfo.discipline && (
-                                  <p className="text-sm text-neutral-600">
-                                    <span className="font-medium">Дисциплина:</span> {competitionInfo.discipline}
-                                  </p>
-                                )}
-                                {competitionInfo.dates && (
-                                  <p className="text-sm text-neutral-600">
-                                    <span className="font-medium">Период проведения:</span> {competitionInfo.dates}
-                                  </p>
-                                )}
-                              </>
-                            );
-                          })()}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-neutral-800 flex items-center">
+                        <Users className="h-5 w-5 mr-2 text-indigo-600" />
+                        Участники команды
+                      </h3>
+                      <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 shadow-sm">
+                        Вы — капитан команды
+                      </Badge>
+                    </div>
 
-                          {/* Информация о капитане */}
-                          <h3 className="text-md font-semibold mt-6 mb-3">Информация о капитане</h3>
-                          <div className="space-y-2">
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">ФИО:</span> {getUserName(application.User)}
-                            </p>
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">ID капитана:</span> {application.UserId || 'Не указано'}
-                            </p>
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Email:</span> {application.User?.email || 'Не указано'}
-                            </p>
-                            {application.User?.user_info?.phone && (
-                              <p className="text-sm text-neutral-600">
-                                <span className="font-medium">Телефон:</span> {application.User.user_info.phone}
-                              </p>
-                            )}
-                            <p className="text-sm text-neutral-600">
-                              <span className="font-medium">Дата подачи заявки:</span> {formatDate(application.createdAt)}
-                            </p>
-                          </div>
+                    <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl shadow-inner mb-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center mr-4 shadow-md">
+                          <User className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <div>
+                          <div className="text-base font-medium text-neutral-800">{user?.firstName} {user?.lastName} (вы)</div>
+                          <div className="text-sm text-neutral-500">Капитан команды</div>
                         </div>
                       </div>
                     </div>
-                  </CardContent>
 
-                  {/* Действия */}
-                  <CardContent className="bg-gray-50 p-4 border-t border-neutral-200">
-                    <div className="flex flex-wrap gap-2 justify-end">
-                      {application.status === 'pending' && (
-                        <>
-                          <Button
-                            className="bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
-                            onClick={() => handleUpdateStatus(application.id, 'approved')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                            Подтвердить
-                          </Button>
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-medium text-neutral-500 uppercase tracking-wider mb-2">Другие участники:</h4>
 
+                      {participants.map((participant, index) => (
+                        <motion.div
+                          key={index}
+                          className="flex items-center gap-3"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <Input
+                            value={participant}
+                            onChange={(e) => updateParticipant(index, e.target.value)}
+                            placeholder="ID участника"
+                            className="flex-1 shadow-sm focus:ring-2 focus:ring-indigo-500 transition-shadow duration-300 py-3 text-base"
+                          />
                           <Button
-                            className="bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
-                            onClick={() => handleUpdateStatus(application.id, 'rejected')}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeParticipantField(index)}
+                            className="shrink-0 w-12 h-12 p-0 flex items-center justify-center shadow-sm hover:shadow transition-shadow duration-300 rounded-xl border-neutral-300"
+                            disabled={participants.length === 1 && index === 0}
                           >
-                            <XCircle className="h-4 w-4" />
-                            Отклонить
+                            <X className="h-5 w-5 text-neutral-500" />
                           </Button>
-                        </>
-                      )}
+                        </motion.div>
+                      ))}
 
                       <Button
+                        type="button"
                         variant="outline"
-                        className="flex items-center justify-center gap-2"
-                        onClick={() => {
-                          console.log('Детали заявки:', application);
-
-                          const teamDetails = application.Team
-                            ? renderTeamDetails(application.Team)
-                            : `ID команды: ${application.TeamId || 'Не указан'}`;
-
-                          const competitionInfo = getCompetitionInfo(application.Competition);
-                          const competitionDetails = application.Competition
-                            ? `Название: ${competitionInfo.name}
-ID: ${application.Competition.id}
-${competitionInfo.description ? `Описание: ${competitionInfo.description}` : ''}
-${competitionInfo.format ? `Формат: ${competitionInfo.format}` : ''}
-${competitionInfo.discipline ? `Дисциплина: ${competitionInfo.discipline}` : ''}
-${competitionInfo.dates ? `Период: ${competitionInfo.dates}` : ''}`
-                            : 'Соревнование не указано';
-
-                          const details = `
-Заявка №${application.id}
-Статус: ${application.status}
-
-Информация о команде:
-${teamDetails}
-
-Информация о соревновании:
-${competitionDetails}
-
-Информация о капитане:
-ID: ${application.UserId}
-Имя: ${getUserName(application.User)}
-Email: ${application.User?.email || 'Не указано'}
-
-Дата создания: ${formatDate(application.createdAt)}
-                          `;
-                          alert(details);
-                        }}
+                        onClick={addParticipantField}
+                        className="w-full py-3 mt-2 bg-gradient-to-r from-slate-50 to-indigo-50 shadow-sm hover:shadow-md transition-all duration-300 border-dashed border-indigo-200 text-indigo-700 hover:text-indigo-800 hover:border-indigo-300 rounded-xl"
+                        leftIcon={<Plus className="h-5 w-5" />}
                       >
-                        Подробнее
+                        Добавить еще участника
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
+                  </div>
+
+                  {teamCreationError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-4 bg-red-50 border border-red-100 rounded-xl shadow-sm text-red-700 text-base"
+                    >
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-6 w-6 text-red-500 flex-shrink-0" />
+                        <span>{teamCreationError}</span>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div className="pt-4">
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      disabled={creatingTeam}
+                      className="w-full py-4 px-8 text-lg bg-gradient-to-r from-indigo-600 to-blue-600 shadow-xl hover:shadow-2xl transition-all duration-300 rounded-xl font-medium"
+                    >
+                      {creatingTeam ? (
+                        <>
+                          <div className="h-6 w-6 border-3 border-white border-t-transparent rounded-full animate-spin mr-3"></div>
+                          Создание команды...
+                        </>
+                      ) : (
+                        <>Создать команду</>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );
 };
 
-export default CompetitionApplicationsPage; 
+export default CompetitionParticipateForm; 

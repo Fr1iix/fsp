@@ -431,7 +431,7 @@ const CompetitionListPage: React.FC = () => {
                   <div className="mt-6 md:mt-8 pt-4 border-t border-neutral-100 flex justify-between">
                     {competition.status === 'registration' && user && (
                       <div className="text-primary-600 font-medium">
-                        <button 
+                        <button
                           onClick={(e) => handleParticipateClick(e, competition.id)}
                           className="bg-accent-500 text-white px-4 md:px-5 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center"
                         >
