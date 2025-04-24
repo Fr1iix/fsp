@@ -75,13 +75,13 @@ export const userAPI = {
 		try {
 			const { data } = await $api.put(`/user/updateRegion/${userId}`, { idRegions: regionId });
 			console.log('Ответ сервера:', data);
-			
+
 			// Если сервер вернул новый токен, сохраняем его
 			if (data.token) {
 				console.log('Сохраняем новый токен с обновленным регионом');
 				localStorage.setItem('token', data.token);
 			}
-			
+
 			return data;
 		} catch (error: any) {
 			console.error('Ошибка при обновлении региона:', error);
@@ -133,11 +133,45 @@ export const competitionAPI = {
 	getOne: async (id: string) => {
 		try {
 			console.log(`Выполняем запрос к API для получения соревнования с ID: ${id}`);
-			const response = await $api.get(`/Competition/${id}`);
+			const response = await $api.get(`/competitions/Competition/${id}`);
 			console.log('Получен ответ от API соревнования:', response.data);
 			return response.data;
 		} catch (error: any) {
 			console.error('Ошибка при получении соревнования:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
+	},
+
+	// Получение статистики соревнования
+	getStats: async (id: string) => {
+		try {
+			console.log(`Выполняем запрос к API для получения статистики соревнования с ID: ${id}`);
+			const response = await $api.get(`/competitions/${id}/stats`);
+			console.log('Получена статистика соревнования:', response.data);
+			return response.data;
+		} catch (error: any) {
+			console.error('Ошибка при получении статистики соревнования:', error);
+			if (error.response) {
+				console.error('Статус ошибки:', error.response.status);
+				console.error('Данные ошибки:', error.response.data);
+			}
+			throw error;
+		}
+	},
+
+	// Получение команд соревнования
+	getTeams: async (id: string) => {
+		try {
+			console.log(`Выполняем запрос к API для получения команд соревнования с ID: ${id}`);
+			const response = await $api.get(`/competitions/${id}/teams`);
+			console.log('Получен список команд соревнования:', response.data);
+			return response.data;
+		} catch (error: any) {
+			console.error('Ошибка при получении команд соревнования:', error);
 			if (error.response) {
 				console.error('Статус ошибки:', error.response.status);
 				console.error('Данные ошибки:', error.response.data);
@@ -192,7 +226,7 @@ export const applicationAPI = {
 
 	// Создать заявку на участие в соревновании
 	createParticipation: async (competitionId: string, teamId?: string) => {
-		const { data } = await $api.post('/applications/participation', { 
+		const { data } = await $api.post('/applications/participation', {
 			CompetitionId: competitionId,
 			TeamId: teamId
 		});
@@ -325,7 +359,7 @@ export const teamsAPI = {
 			if (!teamData.UserId || !teamData.TeamId) {
 				throw new Error('Не все обязательные поля указаны');
 			}
-			
+
 			// Используем правильный URL согласно маршрутов сервера
 			const { data } = await $api.post('/team-members', teamData);
 			return data;
@@ -399,10 +433,10 @@ export const analyticsAPI = {
 				params,
 				responseType: 'blob'
 			});
-			
+
 			console.log('Получен ответ с типом:', response.headers['content-type']);
 			console.log('Размер данных:', response.data.size);
-			
+
 			// Проверяем правильность типа данных ответа
 			if (response.data instanceof Blob) {
 				return response.data;
@@ -446,13 +480,13 @@ export const invitationAPI = {
 		const { data } = await $api.get('/invitations/my');
 		return data;
 	},
-	
+
 	// Получение приглашений для указанной команды
 	getTeamInvitations: async (teamId: string) => {
 		const { data } = await $api.get(`/invitations/team/${teamId}`);
 		return data;
 	},
-	
+
 	// Создание нового приглашения
 	create: async (invitationData: {
 		UserId: string;
@@ -462,7 +496,7 @@ export const invitationAPI = {
 		const { data } = await $api.post('/invitations', invitationData);
 		return data;
 	},
-	
+
 	// Ответ на приглашение (принять/отклонить)
 	respond: async (id: string, status: 'accepted' | 'rejected') => {
 		const { data } = await $api.patch(`/invitations/${id}/respond`, { status });
@@ -547,4 +581,97 @@ export const invitationAPI = {
 	}
 };
 
-export default $api; 
+// API для работы с результатами соревнований
+export const competitionResultsAPI = {
+	// Получение результатов соревнования
+	getByCompetition: async (competitionId: string) => {
+		try {
+			console.log(`Запрос результатов соревнования ID: ${competitionId}`);
+			const { data } = await $api.get(`/competition-results/competition/${competitionId}`);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при получении результатов соревнования:', error);
+			throw error;
+		}
+	},
+
+	// Получение результатов пользователя
+	getByUser: async (userId: string) => {
+		try {
+			const { data } = await $api.get(`/competition-results/user/${userId}`);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при получении результатов пользователя:', error);
+			throw error;
+		}
+	},
+
+	// Добавление результата
+	addResult: async (resultData: any) => {
+		try {
+			const { data } = await $api.post('/competition-results/add', resultData);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при добавлении результата:', error);
+			throw error;
+		}
+	},
+
+	// Добавление результатов команд
+	addTeamResults: async (competitionId: string, results: any[]) => {
+		try {
+			console.log(`Добавление результатов команд в соревнование ID: ${competitionId}`, results);
+			const { data } = await $api.post(`/competition-results/team-results/${competitionId}`, { results });
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при добавлении результатов команд:', error);
+			throw error;
+		}
+	},
+
+	// Обновление результата
+	updateResult: async (id: string, updates: any) => {
+		try {
+			const { data } = await $api.put(`/competition-results/update/${id}`, updates);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при обновлении результата:', error);
+			throw error;
+		}
+	},
+
+	// Подтверждение результатов соревнования
+	confirmResults: async (competitionId: string) => {
+		try {
+			const { data } = await $api.post(`/competition-results/confirm/${competitionId}`);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при подтверждении результатов:', error);
+			throw error;
+		}
+	},
+
+	// Удаление результата
+	deleteResult: async (id: string) => {
+		try {
+			const { data } = await $api.delete(`/competition-results/delete/${id}`);
+			return data;
+		} catch (error: any) {
+			console.error('Ошибка при удалении результата:', error);
+			throw error;
+		}
+	}
+};
+
+// объединяем все API в один объект
+const api = {
+	auth: authAPI,
+	user: userAPI,
+	competitions: competitionAPI,
+	applications: applicationAPI,
+	teams: teamsAPI,
+	results: competitionResultsAPI,
+	// другие API-объекты...
+};
+
+export default api; 

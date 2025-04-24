@@ -1,6 +1,6 @@
 const ApiError = require("../errorr/ApiError")
 const { Op } = require('sequelize');
-const { Competition } = require("../models/models")
+const { Competition, Team, Teammembers, User, Application } = require("../models/models")
 
 class CompetitionController {
     getAll = async (req, res, next) => {
@@ -30,10 +30,89 @@ class CompetitionController {
         }
     }
 
-    async getOneCompetition(req, res) {
-        const id = req.params.id
-        const OneComp = await Competition.findByPk(id)
-        return res.status(200).json(OneComp)
+    async getOneCompetition(req, res, next) {
+        try {
+            const id = req.params.id;
+            const OneComp = await Competition.findByPk(id);
+
+            if (!OneComp) {
+                return res.status(404).json({ error: 'Соревнование не найдено' });
+            }
+
+            return res.status(200).json(OneComp);
+        } catch (error) {
+            console.error('Ошибка при получении соревнования:', error);
+            next(ApiError.badRequest(error.message));
+        }
+    }
+
+    async getCompetitionStats(req, res, next) {
+        try {
+            const { id } = req.params;
+            const competition = await Competition.findByPk(id);
+
+            if (!competition) {
+                return res.status(404).json({ error: 'Соревнование не найдено' });
+            }
+
+            // Получаем количество заявок на участие
+            const applications = await Application.count({
+                where: { CompetitionId: id }
+            });
+
+            // Получаем количество команд
+            const teams = await Team.count({
+                where: { CompetitionId: id }
+            });
+
+            // Получаем количество участников через связи команд и участников команд
+            const teamIds = await Team.findAll({
+                where: { CompetitionId: id },
+                attributes: ['id']
+            }).then(teams => teams.map(team => team.id));
+
+            let participantsCount = 0;
+            if (teamIds.length > 0) {
+                participantsCount = await Teammembers.count({
+                    where: { TeamId: { [Op.in]: teamIds } },
+                    distinct: true,
+                    col: 'UserId'
+                });
+            }
+
+            return res.status(200).json({
+                competitionId: id,
+                applicationsCount: applications,
+                teamsCount: teams,
+                participantsCount: participantsCount
+            });
+        } catch (error) {
+            console.error('Ошибка при получении статистики соревнования:', error);
+            next(ApiError.badRequest(error.message));
+        }
+    }
+
+    async getCompetitionTeams(req, res, next) {
+        try {
+            const { id } = req.params;
+
+            const teams = await Team.findAll({
+                where: { CompetitionId: id },
+                include: [{
+                    model: Teammembers,
+                    include: [User]
+                }]
+            });
+
+            if (!teams || teams.length === 0) {
+                return res.status(200).json([]);
+            }
+
+            return res.status(200).json(teams);
+        } catch (error) {
+            console.error('Ошибка при получении команд соревнования:', error);
+            next(ApiError.badRequest(error.message));
+        }
     }
 
     async create(req, res, next) {

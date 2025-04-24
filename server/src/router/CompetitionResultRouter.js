@@ -23,6 +23,13 @@ router.post('/add',
     CompetitionResultController.addResult
 );
 
+// Добавление результатов команд (для организаторов и региональных представителей)
+router.post('/team-results/:competitionId',
+    authMiddleware,
+    roleMiddleware(['organizer', 'regional']),
+    CompetitionResultController.addTeamResults
+);
+
 // Обновление результата соревнования (только для организаторов)
 router.put('/update/:id',
     authMiddleware,

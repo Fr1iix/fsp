@@ -9,4 +9,8 @@ router.get("/getCompetition", CompetitionController.getAll)
 router.get("/", CompetitionController.getAll)
 router.post("/", CompetitionController.create)
 
+// Новые маршруты
+router.get("/:id/stats", CompetitionController.getCompetitionStats)
+router.get("/:id/teams", CompetitionController.getCompetitionTeams)
+
 module.exports = router

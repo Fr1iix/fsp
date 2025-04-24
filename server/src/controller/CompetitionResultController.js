@@ -1,5 +1,5 @@
 const ApiError = require("../errorr/ApiError");
-const { CompetitionResult, User, UserInfo, Team, Competition } = require("../models/models");
+const { CompetitionResult, User, UserInfo, Team, Competition, Results, Teammembers } = require("../models/models");
 const { Op } = require('sequelize');
 
 class CompetitionResultController {
@@ -76,6 +76,78 @@ class CompetitionResultController {
             });
 
             return res.json(result);
+        } catch (e) {
+            next(ApiError.badRequest(e.message));
+        }
+    }
+
+    // Добавление результатов для команд в соревновании (для организаторов и региональных представителей)
+    async addTeamResults(req, res, next) {
+        try {
+            const { competitionId } = req.params;
+            const { results } = req.body; // [{teamId, place, points}]
+
+            // Проверка доступа - только организаторы или региональные представители могут добавлять результаты
+            const competition = await Competition.findByPk(competitionId);
+            if (!competition) {
+                return res.status(404).json({ message: "Соревнование не найдено" });
+            }
+
+            // Проверка, что все команды действительно существуют и участвуют в этом соревновании
+            const teamIds = results.map(r => r.teamId);
+            const teams = await Team.findAll({
+                where: {
+                    id: { [Op.in]: teamIds },
+                    CompetitionId: competitionId
+                }
+            });
+
+            if (teams.length !== teamIds.length) {
+                return res.status(400).json({ message: "Некоторые команды не найдены или не участвуют в этом соревновании" });
+            }
+
+            // Обновление результатов команд
+            const updatedTeams = [];
+            for (const result of results) {
+                const team = teams.find(t => t.id === result.teamId);
+
+                team.points = result.points;
+                team.result = result.place;
+                await team.save();
+
+                // Теперь создаем или обновляем записи CompetitionResult для каждого участника команды
+                const teamMembers = await Teammembers.findAll({
+                    where: { TeamId: team.id }
+                });
+
+                for (const member of teamMembers) {
+                    await CompetitionResult.upsert({
+                        CompetitionId: competitionId,
+                        UserId: member.UserId,
+                        TeamId: team.id,
+                        place: result.place,
+                        points: result.points,
+                        isConfirmed: false
+                    });
+                }
+
+                updatedTeams.push({
+                    ...team.get(),
+                    newPlace: result.place,
+                    newPoints: result.points
+                });
+            }
+
+            // Обновляем статус соревнования на "Завершено"
+            await Competition.update(
+                { status: 'Завершено' },
+                { where: { id: competitionId } }
+            );
+
+            return res.json({
+                message: "Результаты команд обновлены",
+                teams: updatedTeams
+            });
         } catch (e) {
             next(ApiError.badRequest(e.message));
         }
