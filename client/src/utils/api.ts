@@ -354,6 +354,12 @@ export const invitationAPI = {
 		return data;
 	},
 	
+	// Получение приглашений для указанной команды
+	getTeamInvitations: async (teamId: string) => {
+		const { data } = await $api.get(`/invitations/team/${teamId}`);
+		return data;
+	},
+	
 	// Создание нового приглашения
 	create: async (invitationData: {
 		UserId: string;

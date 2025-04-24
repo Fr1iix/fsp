@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore.ts';
-import api, { applicationAPI } from '../utils/api';
+import api, { applicationAPI, invitationAPI } from '../utils/api';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card.tsx';
 import Button from '../components/ui/Button.tsx';
 import Badge from '../components/ui/Badge.tsx';
-import { CheckCircle, XCircle, RefreshCw, User, Calendar, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, User, Calendar, AlertCircle, UserPlus } from 'lucide-react';
 
 interface ApplicationItem {
   id: string;
@@ -56,6 +56,37 @@ interface ApplicationItem {
   };
 }
 
+// Интерфейс для приглашений участников команды
+interface InvitationItem {
+  id: string;
+  TeamId: string;
+  UserId: string;
+  InvitedBy: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  CompetitionId: string;
+  createdAt: string;
+  User?: {
+    id: string;
+    email: string;
+    user_info?: {
+      firstName?: string;
+      lastName?: string;
+      middleName?: string;
+      phone?: string;
+    }
+  };
+  Inviter?: {
+    id: string;
+    email: string;
+    user_info?: {
+      firstName?: string;
+      lastName?: string;
+      middleName?: string;
+      phone?: string;
+    }
+  };
+}
+
 interface TeamMember {
   id?: string;
   userId?: string;
@@ -65,12 +96,14 @@ interface TeamMember {
   firstName?: string;
   lastName?: string;
   email?: string;
+  phone?: string;
   User?: {
     id: string;
     email: string;
     user_info?: {
       firstName?: string;
       lastName?: string;
+      phone?: string;
     }
   };
 }
@@ -80,6 +113,8 @@ const CompetitionApplicationsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
+  // Состояние для хранения приглашений команд
+  const [teamInvitations, setTeamInvitations] = useState<Record<string, InvitationItem[] | null>>({});
   const { user } = useAuthStore();
 
   // Добавим функцию для прямого запроса всех заявок (для отладки)
@@ -231,9 +266,113 @@ const CompetitionApplicationsPage: React.FC = () => {
     }
   };
 
+  // Функция для отображения информации о приглашениях
+  const renderInvitations = (teamId: string) => {
+    // Проверяем, загружены ли данные для этой команды
+    if (teamInvitations[teamId] === undefined) {
+      return (
+        <p className="text-sm text-neutral-500 italic">Загрузка приглашений...</p>
+      );
+    }
+    
+    const invitations = teamInvitations[teamId];
+    
+    // Проверяем, есть ли у нас права на просмотр
+    if (invitations === null) {
+      return (
+        <p className="text-sm text-neutral-500 italic">Нет прав для просмотра приглашений</p>
+      );
+    }
+    
+    // Если нет приглашений
+    if (invitations.length === 0) {
+      return (
+        <p className="text-sm text-neutral-500 italic">Нет активных приглашений</p>
+      );
+    }
+    
+    return (
+      <div>
+        <ul className="text-sm text-neutral-600 list-disc pl-5">
+          {invitations.map((invitation) => {
+            // Получаем информацию о пользователе
+            const user = invitation.User;
+            const userInfo = user?.user_info;
+            
+            // Формируем ФИО
+            const fullName = userInfo && (userInfo.lastName || userInfo.firstName || userInfo.middleName) 
+              ? `${userInfo.lastName || ''} ${userInfo.firstName || ''} ${userInfo.middleName || ''}`.trim()
+              : '';
+              
+            // Получаем email и телефон
+            const email = user?.email || '';
+            const phone = userInfo?.phone || '';
+            
+            // Получаем статус для отображения
+            const statusBadge = invitation.status === 'pending' 
+              ? <Badge className="bg-yellow-500 text-xs">Ожидает ответа</Badge>
+              : invitation.status === 'accepted'
+              ? <Badge className="bg-green-500 text-xs">Принято</Badge>
+              : <Badge className="bg-red-500 text-xs">Отклонено</Badge>;
+              
+            return (
+              <li key={invitation.id} className="mb-3 border-b pb-2 border-gray-100 last:border-0">
+                {/* Если есть ФИО, email или телефон - выводим их, иначе только ID */}
+                {(fullName || email || phone) ? (
+                  <>
+                    {fullName && (
+                      <div>
+                        <span className="font-medium">{fullName}</span>
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-neutral-500 mt-0.5 flex flex-col">
+                      {email && (
+                        <span>Email: {email}</span>
+                      )}
+                      {phone && (
+                        <span>Телефон: {phone}</span>
+                      )}
+                      <span>ID: {invitation.UserId}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <span className="font-medium">Пользователь ID: {invitation.UserId}</span>
+                  </div>
+                )}
+                
+                <div className="mt-1">
+                  {statusBadge}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  };
+
   // Загружаем заявки при монтировании компонента
   useEffect(() => {
-    fetchApplications();
+    const loadData = async () => {
+      await fetchApplications();
+      
+      // После загрузки заявок загружаем приглашения для всех команд
+      const teamIds = applications
+        .filter(app => app.TeamId)
+        .map(app => app.TeamId);
+      
+      const uniqueTeamIds = [...new Set(teamIds)];
+      console.log('Загрузка приглашений для команд:', uniqueTeamIds);
+      
+      // Загружаем приглашения для каждой команды
+      for (const teamId of uniqueTeamIds) {
+        await fetchTeamInvitations(teamId);
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Функция форматирования даты
@@ -313,7 +452,8 @@ const CompetitionApplicationsPage: React.FC = () => {
           isCapitan: member.is_capitan,
           firstName: member.User.user_info?.firstName || '',
           lastName: member.User.user_info?.lastName || '',
-          email: member.User.email
+          email: member.User.email,
+          phone: member.User.user_info?.phone || ''
         };
       }
       
@@ -323,7 +463,8 @@ const CompetitionApplicationsPage: React.FC = () => {
         isCapitan: member.isCapitan || member.is_capitan,
         firstName: member.firstName || '',
         lastName: member.lastName || '',
-        email: member.email || ''
+        email: member.email || '',
+        phone: member.phone || ''
       };
     });
     
@@ -381,13 +522,96 @@ const CompetitionApplicationsPage: React.FC = () => {
     if (team.members && team.members.length > 0) {
       result += '\nУчастники команды:\n';
       team.members.forEach((member: any, idx: number) => {
-        result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}${member.lastName || member.firstName ? 
-          `${member.lastName || ''} ${member.firstName || ''}`.trim() : 
-          member.email || `Участник #${member.id || idx}`}\n`;
+        // Формируем полное имя
+        const fullName = member.lastName || member.firstName 
+          ? `${member.lastName || ''} ${member.firstName || ''}`.trim()
+          : '';
+          
+        const memberId = member.id || member.userId || member.UserId || 'Не указан';
+        const email = member.email || '';
+        const phone = member.phone || '';
+        
+        // Если есть данные ФИО, email или телефон - выводим их
+        if (fullName || email || phone) {
+          result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}`;
+          
+          if (fullName) {
+            result += `${fullName}\n`;
+          } else {
+            result += `Участник ID: ${memberId}\n`;
+          }
+          
+          if (email) {
+            result += `  Email: ${email}\n`;
+          }
+          
+          if (phone) {
+            result += `  Телефон: ${phone}\n`;
+          }
+          
+          result += `  ID: ${memberId}\n`;
+        } else {
+          // Если нет данных, выводим только ID
+          result += `- ${(member.isCapitan || member.is_capitan) ? '👑 ' : ''}Участник ID: ${memberId}\n`;
+        }
       });
     }
     
     return result;
+  };
+
+  // Функция для загрузки приглашений команды
+  const fetchTeamInvitations = async (teamId: string) => {
+    try {
+      console.log(`Загрузка приглашений для команды ID: ${teamId}`);
+      
+      // API запрос для получения приглашений команды через invitationAPI
+      const invitations = await invitationAPI.getTeamInvitations(teamId);
+      
+      // Добавляем подробный отладочный вывод для проверки данных пользователей
+      console.log(`Получено ${invitations.length} приглашений для команды ${teamId}`);
+      invitations.forEach((invitation: InvitationItem, index: number) => {
+        console.log(`[Отладка] Приглашение ${index + 1}:`, invitation);
+        
+        if (invitation.User) {
+          console.log(`[Отладка] Пользователь:`, {
+            id: invitation.User.id,
+            email: invitation.User.email,
+            user_info: invitation.User.user_info
+          });
+        } else {
+          console.log(`[Отладка] Данные пользователя отсутствуют для ID: ${invitation.UserId}`);
+        }
+      });
+      
+      // Обновляем состояние
+      setTeamInvitations(prev => ({
+        ...prev,
+        [teamId]: invitations
+      }));
+      
+      return invitations;
+    } catch (error: any) {
+      // Проверяем, является ли ошибка ошибкой доступа (403)
+      if (error.response && error.response.status === 403) {
+        console.log(`Нет прав для просмотра приглашений команды ${teamId}: ${error.response.data.message}`);
+        
+        // Устанавливаем null для этой команды, чтобы UI показал сообщение об отсутствии прав
+        setTeamInvitations(prev => ({
+          ...prev,
+          [teamId]: null
+        }));
+      } else {
+        console.error(`Ошибка при загрузке приглашений для команды ${teamId}:`, error);
+        
+        // При других ошибках устанавливаем пустой массив
+        setTeamInvitations(prev => ({
+          ...prev,
+          [teamId]: []
+        }));
+      }
+      return [];
+    }
   };
 
   return (
@@ -501,15 +725,75 @@ const CompetitionApplicationsPage: React.FC = () => {
                                   <div>
                                     <p className="text-sm font-medium text-neutral-600">Участники команды:</p>
                                     <ul className="text-sm text-neutral-600 list-disc pl-5 mt-1">
-                                      {teamInfo.members.map((member: TeamMember, index: number) => (
-                                        <li key={index}>
-                                          {(member.isCapitan || member.is_capitan) && '👑 '}
-                                          {member.lastName || member.firstName ? 
-                                            `${member.lastName || ''} ${member.firstName || ''}`.trim() : 
-                                            member.email || `Участник #${member.id || index}`}
-                                        </li>
-                                      ))}
+                                      {teamInfo.members.map((member: TeamMember, index: number) => {
+                                        // Формируем полное имя
+                                        const fullName = member.lastName || member.firstName 
+                                          ? `${member.lastName || ''} ${member.firstName || ''}`.trim()
+                                          : '';
+                                          
+                                        // Определяем ID участника
+                                        const memberId = member.id || member.userId || member.UserId || `Не указан`;
+                                        
+                                        // Получаем email и телефон
+                                        const email = member.email || '';
+                                        const phone = member.phone || '';
+                                          
+                                        return (
+                                          <li key={index} className="mb-2 border-b pb-2 border-gray-100 last:border-0">
+                                            {/* Если есть имя, email или телефон - выводим их, иначе только ID */}
+                                            {(fullName || email || phone) ? (
+                                              <>
+                                                {fullName && (
+                                                  <div>
+                                                    {(member.isCapitan || member.is_capitan) && '👑 '}
+                                                    <span className="font-medium">{fullName}</span>
+                                                  </div>
+                                                )}
+                                                
+                                                <div className="text-xs text-neutral-500 mt-0.5 flex flex-col">
+                                                  {email && (
+                                                    <span>Email: {email}</span>
+                                                  )}
+                                                  {phone && (
+                                                    <span>Телефон: {phone}</span>
+                                                  )}
+                                                  <span>ID: {memberId}</span>
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <div>
+                                                {(member.isCapitan || member.is_capitan) && '👑 '}
+                                                <span className="font-medium">Участник ID: {memberId}</span>
+                                              </div>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
                                     </ul>
+                                  </div>
+                                )}
+                                
+                                {/* Добавляем блок с приглашениями */}
+                                {application.TeamId && (
+                                  <div className="mt-4">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-sm font-medium text-neutral-600">Приглашения:</p>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        className="text-xs py-1 px-2 h-7"
+                                        onClick={() => fetchTeamInvitations(application.TeamId)}
+                                      >
+                                        <RefreshCw className="h-3 w-3 mr-1" />
+                                        Обновить
+                                      </Button>
+                                    </div>
+                                    
+                                    <div className="mt-2">
+                                      {teamInvitations[application.TeamId] === undefined ? (
+                                        <p className="text-sm text-neutral-500 italic">Загрузка приглашений...</p>
+                                      ) : renderInvitations(application.TeamId)}
+                                    </div>
                                   </div>
                                 )}
                               </>
